@@ -1,0 +1,67 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE Configuration
+.vscode/
+.trae/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Log Files
+*.log
+logs/
+
+# Testing
+.coverage
+.coverage.*
+htmlcov/
+pytest_cache/
+.tox/
+
+# Build Files
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Cache Files
+.cache/
+*.pkl
+*.pickle
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Database Files
+*.db
+*.sqlite3
+
+# Large Files
+*.zip
+*.tar.gz
+*.rar
