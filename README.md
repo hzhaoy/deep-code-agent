@@ -87,10 +87,13 @@ MODEL_NAME=your-model-name-here
 from deep_code_agent import create_code_agent
 
 # Initialize the agent with your codebase directory
-agent = create_code_agent("./your-codebase")
+agent = create_code_agent("your-codebase-directory")
 
 # Run the agent
-agent.run()
+state = {"messages": [{"role": "user", "content": "What are the main features of this project?"}]}
+config={"configurable": {"thread_id": "1"}}
+for step in agent.stream(state, config=config, stream_mode="values"):
+    step["messages"][-1].pretty_print()
 ```
 
 ### Command Line Interface
