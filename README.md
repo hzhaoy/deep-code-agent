@@ -25,28 +25,21 @@ A comprehensive AI-powered coding assistant built on DeepAgents, featuring speci
 
 ### Prerequisites
 
-- Python 3.13 or higher
-- Git
+- [uv](https://docs.astral.sh/uv/getting-started/installation/): An extremely fast Python package and project manager, written in Rust.
 
 ### Install from Source
 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/deep-code-agent.git
+   git clone https://github.com/hzhaoy/deep-code-agent.git
    cd deep-code-agent
    ```
 
 2. Install dependencies:
 
    ```bash
-   pip install -e .
-   ```
-
-3. Install development dependencies (optional):
-
-   ```bash
-   pip install -e .[dev]
+   uv sync
    ```
 
 ## Configuration
@@ -171,7 +164,7 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 For issues, questions, or feedback, please:
 
-1. Check the [Issues](https://github.com/yourusername/deep-code-agent/issues) page
+1. Check the [Issues](https://github.com/hzhaoy/deep-code-agent/issues) page
 2. Create a new issue if needed
 3. Join our community discussions
 
