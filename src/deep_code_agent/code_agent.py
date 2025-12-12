@@ -12,10 +12,8 @@ This module provides a comprehensive code agent with specialized subagents for:
 from pathlib import Path
 
 from deepagents import create_deep_agent
-from deepagents.backends.filesystem import FilesystemBackend
 from deepagents.middleware.subagents import SubAgent
 from langchain_core.language_models import BaseChatModel
-from langgraph.checkpoint.memory import InMemorySaver
 
 from deep_code_agent.models.llms.langchain_chat import create_chat_model
 from deep_code_agent.tools import terminal
@@ -25,22 +23,44 @@ MAX_TIMEOUT = 300  # 最大超时时间（秒）
 DEFAULT_TIMEOUT = 30  # 默认超时时间（秒）
 
 
-def create_code_agent(codebase_dir: str, model: BaseChatModel | None = None):
+def create_code_agent(
+    codebase_dir: str,
+    model: BaseChatModel | None = None,
+    checkpointer=None,
+    backend_type: str = "state",
+):
     """
-    创建一个基于DeepAgents的Code Agent
-
     Create a DeepAgents-based Code Agent for software development tasks.
 
+    This function initializes a Code Agent configured with specialized subagents for
+    code review, test generation, documentation, debugging, and refactoring tasks.
+    It sets up the necessary backend and tools based on the specified backend type.
+
     Args:
-        codebase_dir (str): 代码库目录路径 (Codebase directory path)
-        model: 语言模型实例 (Language model instance)
+        codebase_dir (str): Absolute or relative path to the codebase directory.
+            The directory will be created if it does not exist.
+        model (BaseChatModel | None, optional): Language model instance to power
+            the agent. If None, a default chat model will be created.
+        checkpointer (Any | None, optional): Optional checkpointer for persisting
+            agent state across sessions.
+        backend_type (str, optional): Backend type to use. Must be either "state"
+            (StateBackend) or "filesystem" (FilesystemBackend). Defaults to "state".
 
     Returns:
-        DeepAgent: 配置好的Code Agent实例 (Configured Code Agent instance)
+        DeepAgent: A fully configured Code Agent instance ready to handle
+            software development tasks.
+
+    Raises:
+        PermissionError: If the agent lacks permission to create the codebase directory.
+        OSError: If an OS-level error occurs while creating the codebase directory.
+        RuntimeError: If the DeepAgent creation fails for any reason.
     """
     # 确保代码库目录存在
     try:
-        Path(codebase_dir).mkdir(parents=True, exist_ok=True)
+        path = Path(codebase_dir).absolute()
+        if backend_type == "filesystem" and not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+        codebase_dir = path.as_posix()
     except PermissionError as e:
         raise PermissionError(f"Permission denied creating directory '{codebase_dir}'") from e
     except OSError as e:
@@ -52,15 +72,27 @@ def create_code_agent(codebase_dir: str, model: BaseChatModel | None = None):
     # 创建子agent配置
     subagents = _create_subagent_configurations()
 
+    # 创建并配置backend
+    if backend_type == "filesystem":
+        from deepagents.backends.filesystem import FilesystemBackend
+
+        backend = FilesystemBackend(root_dir=codebase_dir)
+        tools = [terminal]
+    else:
+        from deepagents.backends.state import StateBackend
+
+        backend = lambda rt: StateBackend(rt)
+        tools = []
+
     # 创建并返回agent
     try:
         return create_deep_agent(
             model=model or create_chat_model(),
             system_prompt=system_prompt.format(codebase_dir=codebase_dir),
-            tools=[terminal],
+            tools=tools,
             subagents=list(subagents),
-            checkpointer=InMemorySaver(),
-            backend=FilesystemBackend(codebase_dir),
+            checkpointer=checkpointer,
+            backend=backend,
         )
     except Exception as e:
         raise RuntimeError(f"Error creating DeepAgent: {str(e)}") from e
