@@ -150,6 +150,10 @@ Each subagent has its own system prompt and tools, allowing for specialized beha
 - **Debugger**: Identifies and fixes errors
 - **Refactorer**: Improves code structure and performance
 
+### Agent Flow Diagram
+
+![Agent Flow Diagram](static/agent_flow_mermaid.png)
+
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
