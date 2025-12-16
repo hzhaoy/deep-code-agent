@@ -2,6 +2,8 @@
 
 A comprehensive AI-powered coding assistant built on DeepAgents, featuring specialized subagents for code review, testing, documentation, debugging, and refactoring.
 
+https://github.com/user-attachments/assets/dd14ef6e-5655-4802-b1c2-609d0f6cb6c6
+
 ## Features
 
 ### Core Capabilities
