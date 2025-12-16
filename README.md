@@ -106,6 +106,32 @@ The Deep Code Agent includes specialized subagents that can be used independentl
 - **debugger**: For error resolution
 - **refactorer**: For code improvements
 
+## Local Development & Testing with LangGraph CLI
+
+- Configure `.env` with required keys and model settings
+- Update `server/agent.py` to set `codebase_dir` to your target path
+- Start the dev server: `cd server && uv run langgraph dev`. If the server starts successfully, you will see output similar to the following:
+
+   ```text
+   INFO:langgraph_api.cli:
+
+         Welcome to
+
+   ╦  ┌─┐┌┐┌┌─┐╔═╗┬─┐┌─┐┌─┐┬ ┬
+   ║  ├─┤││││ ┬║ ╦├┬┘├─┤├─┘├─┤
+   ╩═╝┴ ┴┘└┘└─┘╚═╝┴└─┴ ┴┴  ┴ ┴
+
+   - 🚀 API: http://127.0.0.1:2024
+   - 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
+   - 📚 API Docs: http://127.0.0.1:2024/docs
+
+   This in-memory server is designed for development and testing.
+   For production use, please use LangSmith Deployment.
+   ```
+
+- Visit the [Agent Chat UI](https://agentchat.vercel.app/), input the Deployment URL with the API url show above (here is `http://127.0.0.1:2024`) and Assistant / Graph ID (defined in [langgraph.json](server/langgraph.json), here is `agent`). Now you can start chatting with the agent for clicking continue.
+   ![Agent Chat UI](static/agent_chat_ui.png)
+
 ## Project Structure
 
 ```plaintext

@@ -24,6 +24,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # 获取代码库目录
+    print("Welcome to Deep Code Agent!")
     codebase_dir = input("Enter your codebase directory path: ").strip()
 
     if not codebase_dir:

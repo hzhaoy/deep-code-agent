@@ -21,4 +21,4 @@ requires = ["uv_build>=0.9.14,<0.10.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["ipython>=9.8.0"]
+dev = ["ipython>=9.8.0", "langgraph-cli[inmem]>=0.4.9"]
