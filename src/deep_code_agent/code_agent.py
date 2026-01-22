@@ -10,6 +10,7 @@ This module provides a comprehensive code agent with specialized subagents for:
 """
 
 from pathlib import Path
+from typing import Any
 
 from deepagents import create_deep_agent
 from deepagents.middleware.subagents import SubAgent
@@ -22,12 +23,21 @@ from deep_code_agent.tools import terminal
 MAX_TIMEOUT = 300  # 最大超时时间（秒）
 DEFAULT_TIMEOUT = 30  # 默认超时时间（秒）
 
+# 默认的人机交互配置
+DEFAULT_INTERRUPT_ON = {
+    "write_file": True,
+    "edit_file": True,
+    "execute": True,
+    "terminal": True,
+}
+
 
 def create_code_agent(
     codebase_dir: str,
     model: BaseChatModel | None = None,
     checkpointer=None,
     backend_type: str = "state",
+    interrupt_on: dict[str, bool | Any] | None = DEFAULT_INTERRUPT_ON,
 ):
     """
     Create a DeepAgents-based Code Agent for software development tasks.
@@ -40,11 +50,17 @@ def create_code_agent(
         codebase_dir (str): Absolute or relative path to the codebase directory.
             The directory will be created if it does not exist.
         model (BaseChatModel | None, optional): Language model instance to power
+
             the agent. If None, a default chat model will be created.
         checkpointer (Any | None, optional): Optional checkpointer for persisting
             agent state across sessions.
         backend_type (str, optional): Backend type to use. Must be either "state"
             (StateBackend) or "filesystem" (FilesystemBackend). Defaults to "state".
+        interrupt_on (dict[str, bool | Any] | None, optional): Configuration for
+            human-in-the-loop approval. Maps tool names to approval settings.
+            Defaults to DEFAULT_INTERRUPT_ON which enables approvals for
+            write_file, edit_file, execute, and terminal. Set to None to disable
+            all approvals.
 
     Returns:
         DeepAgent: A fully configured Code Agent instance ready to handle
@@ -81,7 +97,10 @@ def create_code_agent(
     else:
         from deepagents.backends.state import StateBackend
 
-        backend = lambda rt: StateBackend(rt)
+        def _backend_factory(rt):
+            return StateBackend(rt)
+
+        backend = _backend_factory
         tools = []
 
     # 创建并返回agent
@@ -93,6 +112,7 @@ def create_code_agent(
             subagents=list(subagents),
             checkpointer=checkpointer,
             backend=backend,
+            interrupt_on=interrupt_on,
         )
     except Exception as e:
         raise RuntimeError(f"Error creating DeepAgent: {str(e)}") from e

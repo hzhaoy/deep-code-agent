@@ -5,11 +5,151 @@ from dotenv import load_dotenv
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command
 
-from deep_code_agent.code_agent import create_code_agent
+from deep_code_agent.code_agent import DEFAULT_INTERRUPT_ON, create_code_agent
 from deep_code_agent.models.llms.langchain_chat import create_chat_model
 
 load_dotenv()
+
+
+def _format_args(args: dict[str, Any], max_length: int = 200) -> str:
+    """Format arguments for display, truncating long values."""
+    formatted = []
+    for key, value in args.items():
+        value_str = str(value)
+        if len(value_str) > max_length:
+            value_str = value_str[:max_length] + "..."
+        formatted.append(f"  {key}: {value_str}")
+    return "\n".join(formatted)
+
+
+def _get_user_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any] | None:
+    """Get user decision for pending action.
+
+    Returns:
+        Decision dict or None if user wants to quit.
+    """
+    print("\n" + "=" * 50)
+    print("⚠️  Action Requires Approval")
+    print("=" * 50)
+    print(f"\nTool: {tool_name}")
+    print("Arguments:")
+    print(_format_args(tool_args))
+    print("\nOptions:")
+    print("  (a)pprove - Execute as-is")
+    print("  (e)dit    - Modify arguments before executing")
+    print("  (r)eject   - Reject and provide feedback")
+    print("  (q)uit     - Exit session")
+    print("=" * 50)
+
+    while True:
+        choice = input("\nYour choice: ").strip().lower()
+
+        if choice in ["a", "approve"]:
+            return {"type": "approve"}
+        elif choice in ["e", "edit"]:
+            return _get_edit_decision(tool_name, tool_args)
+        elif choice in ["r", "reject"]:
+            message = input("Rejection reason (optional): ").strip()
+            return {"type": "reject", "message": message or "Action rejected by user"}
+        elif choice in ["q", "quit"]:
+            return None
+        else:
+            print("Invalid choice. Please enter a, e, r, or q.")
+
+
+def _get_edit_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any]:
+    """Get edited arguments from user.
+
+    Returns:
+        Decision dict with edited action.
+    """
+    print("\n--- Edit Arguments ---")
+    print("Enter argument name to edit (or 'done' to finish):")
+
+    edited_args = tool_args.copy()
+
+    while True:
+        arg_name = input("\nArgument name (or 'done'): ").strip()
+
+        if arg_name.lower() == "done":
+            break
+
+        if arg_name not in edited_args:
+            print(f"Warning: '{arg_name}' is not a valid argument.")
+            print(f"Valid arguments: {', '.join(edited_args.keys())}")
+            continue
+
+        current_value = edited_args[arg_name]
+        print(f"Current value: {current_value}")
+
+        new_value = input(f"Enter new value for '{arg_name}': ").strip()
+        edited_args[arg_name] = new_value
+
+    return {
+        "type": "edit",
+        "edited_action": {
+            "name": tool_name,
+            "args": edited_args,
+        },
+    }
+
+
+def _handle_interrupt(agent, interrupt_data, config: RunnableConfig) -> dict[str, Any] | None:
+    """Handle human-in-the-loop interrupt using streaming.
+
+    Returns:
+        Final result or None if user wants to quit.
+    """
+    while True:
+        try:
+            # Stream agent progress and LLM tokens until interrupt
+            tool_calls = interrupt_data[0].value.get("action_requests", [])
+
+            if not tool_calls:
+                print("\nError: No tool calls in interrupt data.")
+                return None
+
+            tool_call = tool_calls[0]
+            tool_name = tool_call.get("name", "unknown")
+            tool_args = tool_call.get("args", {})
+
+            decision = _get_user_decision(tool_name, tool_args)
+
+            if decision is None:
+                return None
+
+            # Resume with streaming after human decision
+            for mode, chunk in agent.stream(
+                Command(resume={"decisions": [decision]}),
+                config=config,
+                stream_mode=["updates", "messages"],
+            ):
+                if mode == "messages":
+                    token, metadata = chunk
+                    if token.content:
+                        print(token.content, end="", flush=True)
+                        if metadata["langgraph_node"] != "model":
+                            print()
+                elif mode == "updates":
+                    # Check if another interrupt occurred
+                    if "__interrupt__" in chunk:
+                        # Continue loop to handle next interrupt
+                        interrupt_data = chunk["__interrupt__"]
+                        print()
+                        break
+            else:
+                # No more interrupts, return final result
+                return chunk
+
+        except KeyboardInterrupt:
+            print("\n\nInterrupted by user. Exiting.")
+            return None
+        except Exception as e:
+            print(f"\nError during approval: {e}")
+            print("Please try again or type 'q' to quit.")
+            continue
 
 
 def main() -> None:
@@ -70,26 +210,24 @@ def main() -> None:
                 try:
                     state = {"messages": [{"role": "user", "content": user_input}]}
                     print("\nAgent: Thinking...")
-                    print("\nAgent: ", end="", flush=True)
 
-                    last_type = "model"
-                    for token, metadata in agent.stream(state, stream_mode="messages", config=config):
-                        t = cast(Any, token)
-                        meta = cast(dict[str, Any], metadata)
-                        if meta["langgraph_node"] == "model" and len(t.content_blocks) != 0:
-                            if t.content_blocks[0]["type"] == "tool_call_chunk":
-                                if last_type == "model":
-                                    last_type = "tool"
-                                    print("\n")
-                                if t.content_blocks[0]["name"] is not None:
-                                    print(f"\nCalling tool: {t.content_blocks[0]['name']}, Args:", flush=True)
-                                else:
-                                    print(f"{t.content_blocks[0]['args']}", end="", flush=True)
-                            else:
-                                if last_type == "tool":
-                                    last_type = "model"
-                                    print("\n")
-                                print(t.content_blocks[0]["text"], end="", flush=True)
+                    # Stream agent progress and handle
+                    print("\nAgent: ", end="", flush=True)
+                    for mode, chunk in agent.stream(
+                        state,
+                        config=config,
+                        stream_mode=["updates", "messages"],
+                    ):
+                        if mode == "messages":
+                            token, metadata = chunk
+                            if token.content:
+                                print(token.content, end="", flush=True)
+                        elif mode == "updates":
+                            # Check for interrupt
+                            if "__interrupt__" in chunk:
+                                _handle_interrupt(agent, chunk["__interrupt__"], config)
+                except KeyboardInterrupt:
+                    print("\n\nInterrupted by user.")
                 except Exception as e:
                     print(f"\nError: {str(e)}")
             else:

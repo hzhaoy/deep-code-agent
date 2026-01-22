@@ -2,7 +2,7 @@
 
 A comprehensive AI-powered coding assistant built on DeepAgents, featuring specialized subagents for code review, testing, documentation, debugging, and refactoring.
 
-https://github.com/user-attachments/assets/dd14ef6e-5655-4802-b1c2-609d0f6cb6c6
+<https://github.com/user-attachments/assets/dd14ef6e-5655-4802-b1c2-609d0f6cb6c6>
 
 ## Features
 
@@ -13,6 +13,7 @@ https://github.com/user-attachments/assets/dd14ef6e-5655-4802-b1c2-609d0f6cb6c6
 - **Documentation**: Generates professional documentation including docstrings and READMEs
 - **Debugging**: Identifies and resolves code errors with step-by-step guidance
 - **Refactoring**: Suggests improvements for code structure, performance, and maintainability
+- **Human-in-the-Loop**: Configurable approval workflow for file modifications and command execution
 
 ### Technical Highlights
 
@@ -22,6 +23,7 @@ https://github.com/user-attachments/assets/dd14ef6e-5655-4802-b1c2-609d0f6cb6c6
 - File system integration for working with codebases
 - Terminal command execution with safety controls
 - Extensible subagent architecture
+- Human-in-the-loop approval system using LangChain HITL middleware
 
 ## Installation
 
@@ -82,6 +84,7 @@ MODEL_NAME=your-model-name-here
 from deep_code_agent import create_code_agent
 
 # Initialize the agent with your codebase directory
+# By default, human-in-the-loop approvals are enabled for file and command operations
 agent = create_code_agent("your-codebase-directory")
 
 # Run the agent
@@ -91,11 +94,69 @@ for step in agent.stream(state, config=config, stream_mode="values"):
     step["messages"][-1].pretty_print()
 ```
 
+### Human-in-the-Loop Configuration
+
+The agent supports configurable approval workflows for file modifications and command execution:
+
+```python
+from deep_code_agent import create_code_agent, DEFAULT_INTERRUPT_ON
+
+# Default - approvals enabled for all file and command operations
+agent = create_code_agent("your-codebase-directory")
+
+# Disable all approvals (run autonomously)
+agent = create_code_agent("your-codebase-directory", interrupt_on=None)
+
+# Custom - only approve file writes
+agent = create_code_agent(
+    "your-codebase-directory",
+    interrupt_on={"write_file": True}
+)
+
+# Custom - approve file operations but auto-approve commands
+agent = create_code_agent(
+    "your-codebase-directory",
+    interrupt_on={
+        "write_file": True,
+        "edit_file": True,
+    }
+)
+```
+
+**Available approval options:**
+
+- `write_file` - Approve file creation/overwrites
+- `edit_file` - Approve file edits
+- `execute` - Approve shell commands (from FilesystemBackend)
+- `terminal` - Approve terminal commands (custom tool)
+
 ### Command Line Interface
 
 ```bash
-# Run the agent
+# Run the agent (approvals enabled by default)
 python -m deep_code_agent
+```
+
+When using the CLI, you'll be prompted for approval when the agent attempts to modify files or execute commands:
+
+```
+==================================================
+⚠️  Action Requires Approval
+==================================================
+
+Tool: write_file
+Arguments:
+  file_path: /path/to/file.py
+  content: def hello(): ...
+
+Options:
+  (a)pprove - Execute as-is
+  (e)dit    - Modify arguments before executing
+  (r)eject   - Reject and provide feedback
+  (q)uit     - Exit session
+==================================================
+
+Your choice:
 ```
 
 ### Working with Subagents
@@ -140,7 +201,7 @@ The Deep Code Agent includes specialized subagents that can be used independentl
 deep-code-agent/
 ├── src/
 │   └── deep_code_agent/
-│       ├── __init__.py            # Package initialization
+│       ├── __init__.py            # Package initialization & CLI interrupt handling
 │       ├── __main__.py            # CLI entry point
 │       ├── code_agent.py          # Main agent implementation
 │       ├── tools/
@@ -149,6 +210,9 @@ deep-code-agent/
 │       └── models/
 │           └── llms/
 │               └── langchain_chat.py  # LLM integration
+├── tests/
+│   ├── test_code_agent.py         # Tests for code_agent module
+│   └── test_interrupt_handling.py  # Tests for interrupt handling
 ├── .env.example                   # Environment variables template
 ├── .gitignore                     # Git ignore rules
 ├── .python-version                # Python version pin
