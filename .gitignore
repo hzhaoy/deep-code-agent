@@ -65,3 +65,4 @@ build/
 *.zip
 *.tar.gz
 *.rar
+.worktrees/
