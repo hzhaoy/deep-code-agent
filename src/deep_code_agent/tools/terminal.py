@@ -1,10 +1,11 @@
+"""Terminal command execution tool."""
+
 import os
 import subprocess
+
 from langchain_core.tools import tool
 
-# 配置常量
-MAX_TIMEOUT = 300  # 最大超时时间（秒）
-DEFAULT_TIMEOUT = 30  # 默认超时时间（秒）
+from deep_code_agent.config import DEFAULT_TIMEOUT, MAX_TIMEOUT
 
 
 @tool
@@ -12,39 +13,40 @@ def terminal(command: str, timeout: int = DEFAULT_TIMEOUT) -> str:
     """Execute terminal commands with timeout protection.
 
     Args:
-        command (str):  Terminal command to execute
-        timeout (int):  Command timeout in seconds, defaults to 30
+        command (str): Terminal command to execute.
+        timeout (int): Command timeout in seconds, defaults to 30.
 
     Returns:
-        str: Command execution result
+        str: Command execution result.
     """
-    # 验证超时时间
+    # Validate timeout
     if timeout <= 0:
         return f"Error: Timeout must be positive, got {timeout}"
     if timeout > MAX_TIMEOUT:
         return f"Error: Timeout {timeout} exceeds maximum allowed {MAX_TIMEOUT} seconds"
+
     try:
-        # 验证命令
+        # Validate command
         if not command or not command.strip():
             return "Error: Command cannot be empty"
 
-        # 安全检查 - 阻止危险命令
+        # Security check - block dangerous commands
         dangerous_commands = ["rm -rf /", "format", "del /q"]
         for dangerous in dangerous_commands:
             if dangerous in command.lower():
                 return f"Error: Command contains potentially dangerous operation: {dangerous}"
 
-        # 执行命令
+        # Execute command
         result = subprocess.run(
             command,
             shell=True,
             capture_output=True,
             text=True,
             timeout=timeout,
-            cwd=os.getcwd(),  # 确保在当前工作目录执行
+            cwd=os.getcwd(),
         )
 
-        # 构建输出结果
+        # Build output
         output_parts = []
 
         if result.stdout:
@@ -52,7 +54,7 @@ def terminal(command: str, timeout: int = DEFAULT_TIMEOUT) -> str:
         if result.stderr:
             output_parts.append(f"STDERR:\n{result.stderr}")
 
-        # 添加执行状态信息
+        # Add status info
         status_info = f"Command executed with exit code: {result.returncode}"
         if result.returncode != 0:
             status_info += " (non-zero exit code indicates potential error)"

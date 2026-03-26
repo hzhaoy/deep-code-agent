@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-deep-code-agent = "deep_code_agent:main"
+deep-code-agent = "deep_code_agent.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.9.14,<0.10.0"]
