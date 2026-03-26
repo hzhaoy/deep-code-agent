@@ -38,7 +38,7 @@ class ChatLog(VerticalScroll):
     def compose(self):
         """Compose the chat log (empty initially)."""
         # Messages will be added dynamically
-        pass
+        return []
 
     def add_user_message(self, content: str) -> MessageBubble:
         """Add a user message to the chat log.
