@@ -1,0 +1,61 @@
+/* Deep Code Agent TUI - Main Stylesheet */
+
+/* Global settings */
+* {
+    transition: all 200ms;
+}
+
+/* Main layout */
+#main-container {
+    height: 100%;
+    width: 100%;
+}
+
+#sidebar {
+    width: 25%;
+    min-width: 20;
+    max-width: 40;
+    border-right: solid $primary;
+}
+
+#content {
+    width: 75%;
+    height: 100%;
+}
+
+/* Chat log */
+#chat_log {
+    height: 1fr;
+    border: solid $primary-darken-2;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+/* Input box */
+#input_box {
+    height: auto;
+    margin-top: 1;
+}
+
+#user-input {
+    width: 1fr;
+}
+
+#send-button {
+    width: auto;
+    margin-left: 1;
+}
+
+/* Status bar */
+#status_bar {
+    height: 1;
+    background: $surface-darken-1;
+    color: $text;
+    content-align: center middle;
+}
+
+/* Dark mode (default) */
+App {
+    background: $surface-darken-2;
+    color: $text;
+}

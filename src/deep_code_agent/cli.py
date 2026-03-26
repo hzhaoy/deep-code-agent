@@ -156,8 +156,13 @@ def main() -> None:
     parser.add_argument("--api-key", default=None, help="API Key")
     parser.add_argument("--base-url", default=None, help="Base URL for model service")
     parser.add_argument("--thread-id", default="1", help="Thread ID for session")
+    parser.add_argument("--tui", action="store_true", help="Use TUI mode (experimental)")
 
     args = parser.parse_args()
+
+    if args.tui:
+        _run_tui_mode(args)
+        return
 
     # Only import heavy dependencies after confirming we're not just showing help
     from dotenv import load_dotenv
@@ -239,3 +244,63 @@ def main() -> None:
     except Exception as e:
         print(f"\nFailed to initialize agent: {str(e)}")
         print("Please check your input and try again.")
+
+
+def _run_tui_mode(args) -> None:
+    """Run the TUI mode.
+
+    Args:
+        args: Parsed command line arguments
+    """
+    import os
+    from dotenv import load_dotenv
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    from deep_code_agent.code_agent import create_code_agent
+    from deep_code_agent.models.llms.langchain_chat import create_chat_model
+    from deep_code_agent.tui import DeepCodeAgentApp
+
+    load_dotenv()
+
+    # Get codebase directory
+    codebase_dir = os.getcwd()
+
+    print(f"🚀 Starting Deep Code Agent TUI...")
+    print(f"📁 Codebase: {codebase_dir}")
+
+    try:
+        model = None
+        if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
+            model = create_chat_model(
+                model_name=args.model_name,
+                model_provider=args.model_provider,
+                api_key=args.api_key,
+                base_url=args.base_url,
+            )
+
+        agent = create_code_agent(
+            codebase_dir=codebase_dir,
+            model=model,
+            checkpointer=InMemorySaver(),
+            backend_type=args.backend_type,
+        )
+
+        session_info = {
+            "model": args.model_name or "default",
+            "session_id": args.thread_id,
+            "codebase_dir": codebase_dir,
+        }
+
+        app = DeepCodeAgentApp(
+            agent=agent,
+            config={"configurable": {"thread_id": args.thread_id}},
+            session_info=session_info,
+        )
+
+        app.run()
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
