@@ -1,12 +1,12 @@
 """Chat log widget for displaying conversation history."""
 
-from textual.widgets import ScrollableContainer
+from textual.containers import VerticalScroll
 from textual.reactive import reactive
 
 from deep_code_agent.tui.widgets.message_bubble import MessageBubble
 
 
-class ChatLog(ScrollableContainer):
+class ChatLog(VerticalScroll):
     """A scrollable container for chat messages.
 
     Displays a conversation history with message bubbles for user,
