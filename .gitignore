@@ -66,3 +66,8 @@ build/
 *.tar.gz
 *.rar
 .worktrees/
+
+# Claude Code Local Settings
+.claude/settings.local.json
+.claude/memory/
+.claude/scheduled_tasks.json
