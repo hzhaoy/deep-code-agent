@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 # Import the functions to test
-from deep_code_agent import _format_args, _get_edit_decision, _get_user_decision
+from deep_code_agent.cli import _format_args, _get_edit_decision, _get_user_decision
 
 
 class TestFormatArgs:
@@ -85,7 +85,7 @@ class TestGetUserDecision:
         assert result == {"type": "approve"}
 
     @patch("builtins.input")
-    @patch("deep_code_agent._get_edit_decision")
+    @patch("deep_code_agent.cli._get_edit_decision")
     def test_edit_decision(self, mock_edit, mock_input):
         """Test edit decision."""
         mock_input.side_effect = ["e"]
