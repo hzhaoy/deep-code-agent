@@ -1,9 +1,9 @@
 """Input box widget for user message entry."""
 
-from textual.widgets import Input, Button
 from textual.containers import Horizontal
-from textual.reactive import reactive
 from textual.message import Message
+from textual.reactive import reactive
+from textual.widgets import Button, Input
 
 
 class InputBox(Horizontal):
@@ -67,10 +67,7 @@ class InputBox(Horizontal):
 
     def compose(self):
         """Compose the input box."""
-        yield Input(
-            placeholder="Type your message here... (Shift+Enter for new line)",
-            id="user-input"
-        )
+        yield Input(placeholder="Type your message here... (Shift+Enter for new line)", id="user-input")
         yield Button("Send", variant="primary", id="send-button")
 
     def on_mount(self) -> None:

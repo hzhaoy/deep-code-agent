@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from typing import TYPE_CHECKING, Any
 
 from deep_code_agent.tui.bridge.stream_handler import (
@@ -40,6 +41,28 @@ class AgentBridge:
         self.stream_handler: StreamHandler | None = None
         self._current_request: asyncio.Task | None = None
         self._pending_decision: asyncio.Future | None = None
+        self._streaming_content = ""
+        self._streaming_bubble = None
+        self._last_ui_error: str | None = None
+
+    def _reset_streaming_state(self) -> None:
+        self._streaming_content = ""
+        self._streaming_bubble = None
+
+    def _run_on_app(self, func, *args, **kwargs) -> None:
+        if self.app is None:
+            return
+        try:
+            thread_id = getattr(self.app, "_thread_id")
+        except Exception:
+            thread_id = None
+        if thread_id is not None and thread_id == threading.get_ident():
+            func(*args, **kwargs)
+            return
+        try:
+            self.app.call_from_thread(func, *args, **kwargs)
+        except RuntimeError:
+            func(*args, **kwargs)
 
     def set_config(self, config: dict) -> None:
         """Set the runnable config.
@@ -50,15 +73,7 @@ class AgentBridge:
         self.config = config
 
     async def process_request(self, message: str) -> None:
-        """Process a user request and stream events to the TUI.
-
-        This is the main entry point for handling user messages. It creates
-        a StreamHandler, processes the stream, and dispatches events to
-        the TUI via callbacks.
-
-        Args:
-            message: User's input message
-        """
+        """Process a user request and stream events to the TUI."""
         if self.app is None:
             return
 
@@ -78,10 +93,11 @@ class AgentBridge:
             pass
         except Exception as e:
             # Dispatch error event
-            await self._dispatch_event(AgentEvent(
-                type=EventType.ERROR,
-                data=str(e)
-            ))
+            self._run_on_app(self.app.notify, f"[ERROR] {e}", title="Error", severity="error")
+            import traceback
+
+            traceback.print_exc()
+            await self._dispatch_event(AgentEvent(type=EventType.ERROR, data=str(e)))
 
     async def resume_with_decision(self, decision: dict) -> None:
         """Resume after HITL decision.
@@ -99,10 +115,7 @@ class AgentBridge:
             async for event in self.stream_handler.resume_with_decision(decision):
                 await self._dispatch_event(event)
         except Exception as e:
-            await self._dispatch_event(AgentEvent(
-                type=EventType.ERROR,
-                data=str(e)
-            ))
+            await self._dispatch_event(AgentEvent(type=EventType.ERROR, data=str(e)))
 
     def cancel_current(self) -> None:
         """Cancel the current request."""
@@ -121,63 +134,91 @@ class AgentBridge:
         if self.app is None:
             return
 
-        # Get the main screen
-        try:
-            from deep_code_agent.tui.screens.main_screen import MainScreen
-            main_screen = self.app.query_one(MainScreen)
-        except Exception:
-            return
+        def handle_event() -> None:
+            app = self.app
+            if app is None:
+                return
+            try:
+                from deep_code_agent.tui.widgets.chat_log import ChatLog
+                from deep_code_agent.tui.widgets.input_box import InputBox
+                from deep_code_agent.tui.widgets.side_panel import SidePanel
+                from deep_code_agent.tui.widgets.status_bar import StatusBar
 
-        if event.type == EventType.THINKING_START:
-            main_screen.get_status_bar().set_thinking()
-            main_screen.get_input_box().set_disabled(True)
+                chat_log = getattr(app, "_chat_log", None)
+                status_bar = getattr(app, "_status_bar", None)
+                input_box = getattr(app, "_input_box", None)
+                side_panel = getattr(app, "_side_panel", None)
 
-        elif event.type == EventType.MESSAGE_CHUNK:
-            # Accumulate streaming content
-            chat_log = main_screen.get_chat_log()
-            # For streaming, we'd need a reference to the current message bubble
-            # This is simplified - actual implementation would track the current bubble
-            pass
+                if chat_log is None or status_bar is None or input_box is None or side_panel is None:
+                    screen = getattr(app, "screen", None)
+                    if screen is None:
+                        raise RuntimeError("No active screen")
+                    chat_log = screen.query_one("#chat_log", ChatLog)
+                    status_bar = screen.query_one("#status_bar", StatusBar)
+                    input_box = screen.query_one("#input_box", InputBox)
+                    side_panel = screen.query_one("#sidebar", SidePanel)
+            except Exception as e:
+                message = f"[ERROR] Failed to get UI widgets: {e}"
+                if self._last_ui_error != message:
+                    self._last_ui_error = message
+                    app.notify(message, title="Error", severity="error")
+                return
 
-        elif event.type == EventType.MESSAGE_COMPLETE:
-            chat_log = main_screen.get_chat_log()
-            chat_log.add_agent_message(event.data or "")
-            main_screen.get_status_bar().set_ready()
-            main_screen.get_input_box().set_disabled(False)
-            main_screen.get_input_box().focus_input()
+            try:
+                if event.type == EventType.THINKING_START:
+                    self._reset_streaming_state()
+                    status_bar.set_thinking()
+                    input_box.set_disabled(True)
 
-        elif event.type == EventType.TOOL_CALL:
-            chat_log = main_screen.get_chat_log()
-            tool_data = event.data or {}
-            chat_log.add_tool_call(
-                tool_name=tool_data.get("name", "unknown"),
-                args=tool_data.get("args", {})
-            )
-            side_panel = main_screen.get_side_panel()
-            side_panel.add_tool_call(
-                tool_name=tool_data.get("name", "unknown"),
-                args=tool_data.get("args", {})
-            )
+                elif event.type == EventType.MESSAGE_CHUNK:
+                    self._streaming_content += event.data or ""
+                    if self._streaming_bubble is None:
+                        self._streaming_bubble = chat_log.add_agent_message(self._streaming_content)
+                    else:
+                        self._streaming_bubble.update_content(self._streaming_content)
+                    status_bar.set_streaming()
 
-        elif event.type == EventType.HITL_INTERRUPT:
-            main_screen.get_status_bar().set_waiting_approval()
-            # Push approval modal
-            interrupt_data = event.data
-            from deep_code_agent.tui.screens.approval_modal import ApprovalModal
+                elif event.type == EventType.MESSAGE_COMPLETE:
+                    content = event.data or self._streaming_content
+                    if self._streaming_bubble is None:
+                        chat_log.add_agent_message(content)
+                    else:
+                        self._streaming_bubble.update_content(content)
+                    self._reset_streaming_state()
+                    status_bar.set_ready()
+                    input_box.set_disabled(False)
+                    input_box.focus_input()
 
-            def on_decision(decision: dict) -> None:
-                # Resume with decision
-                asyncio.create_task(self.resume_with_decision(decision))
+                elif event.type == EventType.TOOL_CALL:
+                    tool_data = event.data or {}
+                    chat_log.add_tool_call(tool_name=tool_data.get("name", "unknown"), args=tool_data.get("args", {}))
+                    side_panel.add_tool_call(tool_name=tool_data.get("name", "unknown"), args=tool_data.get("args", {}))
 
-            modal = ApprovalModal(interrupt_data, callback=on_decision)
-            self.app.push_screen(modal)
+                elif event.type == EventType.HITL_INTERRUPT:
+                    status_bar.set_waiting_approval()
+                    interrupt_data = event.data
+                    from deep_code_agent.tui.screens.approval_modal import ApprovalModal
 
-        elif event.type == EventType.ERROR:
-            main_screen.get_status_bar().set_error(event.data or "Unknown error")
-            main_screen.get_input_box().set_disabled(False)
-            chat_log = main_screen.get_chat_log()
-            chat_log.add_system_message(f"❌ Error: {event.data}")
+                    def on_decision(decision: dict) -> None:
+                        asyncio.create_task(self.resume_with_decision(decision))
 
-        elif event.type == EventType.DONE:
-            main_screen.get_status_bar().set_ready()
-            main_screen.get_input_box().set_disabled(False)
+                    modal = ApprovalModal(interrupt_data, callback=on_decision)
+                    app.push_screen(modal)
+
+                elif event.type == EventType.ERROR:
+                    self._reset_streaming_state()
+                    status_bar.set_error(event.data or "Unknown error")
+                    input_box.set_disabled(False)
+                    chat_log.add_system_message(f"❌ Error: {event.data}")
+
+                elif event.type == EventType.DONE:
+                    status_bar.set_ready()
+                    input_box.set_disabled(False)
+            except Exception as e:
+                app.notify(f"[ERROR] Error dispatching event {event.type}: {e}", title="Error", severity="error")
+                print(f"[ERROR] Error dispatching event {event.type}: {e}")
+                import traceback
+
+                traceback.print_exc()
+
+        self._run_on_app(handle_event)

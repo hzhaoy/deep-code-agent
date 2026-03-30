@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-import asyncio
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.reactive import reactive
 
-from deep_code_agent.tui.screens.main_screen import MainScreen
 from deep_code_agent.tui.bridge.agent_bridge import AgentBridge
+from deep_code_agent.tui.screens.main_screen import MainScreen
+
+if TYPE_CHECKING:
+    from deep_code_agent.tui.widgets.chat_log import ChatLog
+    from deep_code_agent.tui.widgets.input_box import InputBox
+    from deep_code_agent.tui.widgets.side_panel import SidePanel
+    from deep_code_agent.tui.widgets.status_bar import StatusBar
 
 
 class DeepCodeAgentApp(App):
@@ -36,13 +40,7 @@ class DeepCodeAgentApp(App):
     dark = reactive(True)
     session_info = reactive({})
 
-    def __init__(
-        self,
-        agent: Any,
-        config: dict | None = None,
-        session_info: dict | None = None,
-        **kwargs
-    ):
+    def __init__(self, agent: Any, config: dict | None = None, session_info: dict | None = None, **kwargs):
         """Initialize the TUI app.
 
         Args:
@@ -59,33 +57,30 @@ class DeepCodeAgentApp(App):
         # Create bridge
         self.bridge = AgentBridge(agent, self)
         self.bridge.set_config(self.config)
+        self._main_screen: MainScreen | None = None
+        self._chat_log: ChatLog | None = None
+        self._status_bar: StatusBar | None = None
+        self._input_box: InputBox | None = None
+        self._side_panel: SidePanel | None = None
 
     def compose(self) -> ComposeResult:
         """Compose the application."""
-        # Push main screen
-        yield MainScreen(session_info=self.session_info)
+        return iter([])
 
     def on_mount(self) -> None:
         """Called when app is mounted."""
         self.title = "Deep Code Agent"
         self.sub_title = self.session_info.get("model", "AI Assistant")
 
-        # Set up event handlers
-        main_screen = self.query_one(MainScreen)
-        input_box = main_screen.get_input_box()
+        main_screen = MainScreen(session_info=self.session_info)
+        self.push_screen(main_screen)
 
-        # Connect input box to bridge
-        self._setup_input_handler(input_box)
-
-    def _setup_input_handler(self, input_box) -> None:
-        """Set up the input handler for the input box."""
-        # Store reference for later
-        self._input_box = input_box
-
-    def on_input_box_user_input(self, event) -> None:
-        """Handle user input from InputBox."""
-        # Process through bridge
-        asyncio.create_task(self.bridge.process_request(event.content))
+    def register_main_screen(self, screen: MainScreen) -> None:
+        self._main_screen = screen
+        self._chat_log = screen.get_chat_log()
+        self._status_bar = screen.get_status_bar()
+        self._input_box = screen.get_input_box()
+        self._side_panel = screen.get_side_panel()
 
     def action_toggle_dark(self) -> None:
         """Toggle dark mode."""
@@ -94,21 +89,17 @@ class DeepCodeAgentApp(App):
     def action_help(self) -> None:
         """Show help."""
         self.notify(
-            "Shortcuts:\n"
-            "  Ctrl+C: Quit\n"
-            "  Ctrl+D: Toggle dark mode\n"
-            "  F1: Help\n"
-            "  Tab: Navigate widgets",
+            "Shortcuts:\n" "  Ctrl+C: Quit\n" "  Ctrl+D: Toggle dark mode\n" "  F1: Help\n" "  Tab: Navigate widgets",
             title="Help",
             severity="information",
-            timeout=10
+            timeout=10,
         )
 
     def update_session_info(self, session_info: dict) -> None:
         """Update session information."""
         self.session_info = session_info
-        main_screen = self.query_one(MainScreen)
-        main_screen.update_session_info(session_info)
+        if self._main_screen is not None:
+            self._main_screen.update_session_info(session_info)
         self.sub_title = session_info.get("model", "AI Assistant")
 
     def get_bridge(self) -> AgentBridge:

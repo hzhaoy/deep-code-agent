@@ -1,7 +1,7 @@
 """Message bubble widget for chat display."""
 
-from textual.widgets import Static
 from textual.containers import Vertical
+from textual.widgets import Static
 
 
 class MessageBubble(Vertical):
@@ -19,6 +19,7 @@ class MessageBubble(Vertical):
     MessageBubble {
         width: 100%;
         margin: 1 0;
+        height: auto;
     }
 
     MessageBubble.user {
@@ -36,21 +37,7 @@ class MessageBubble(Vertical):
     MessageBubble .bubble-content {
         max-width: 80%;
         padding: 1 2;
-    }
-
-    MessageBubble.user .bubble-content {
-        background: $primary-darken-2;
-        border-right: thick $primary;
-    }
-
-    MessageBubble.agent .bubble-content {
-        background: $surface-darken-1;
-        border-left: thick $success;
-    }
-
-    MessageBubble.system .bubble-content {
-        background: $warning-darken-2;
-        text-style: italic;
+        height: auto;
     }
 
     MessageBubble .role-label {
@@ -65,6 +52,12 @@ class MessageBubble(Vertical):
     MessageBubble.agent .role-label {
         color: $success;
     }
+
+    MessageBubble .message-text {
+        width: 100%;
+        height: auto;
+        text-wrap: wrap;
+    }
     """
 
     def __init__(self, content: str, role: str = "agent", **kwargs):
@@ -75,14 +68,13 @@ class MessageBubble(Vertical):
 
     def compose(self):
         """Compose the message bubble."""
-        with Static(classes="bubble-content"):
-            # Add role label for clarity
+        with Vertical(classes="bubble-content"):
             if self.role != "system":
                 yield Static(f"{self.role.upper()}", classes="role-label")
-            yield Static(self.content)
+            yield Static(self.content, classes="message-text")
 
     def update_content(self, new_content: str) -> None:
         """Update the bubble content (useful for streaming)."""
         self.content = new_content
-        content_widget = self.query_one(".bubble-content Static:last-child", Static)
+        content_widget = self.query_one(".message-text", Static)
         content_widget.update(new_content)

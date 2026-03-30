@@ -1,5 +1,6 @@
 """Stream handler for processing LangGraph Agent output."""
 
+import asyncio
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import AsyncIterator, Any
@@ -80,13 +81,14 @@ class StreamHandler:
             )
 
             # Stream from agent
-            stream = self.agent.stream(
+            stream = self.agent.astream(
                 state,
                 config=self.config,
                 stream_mode=["updates", "messages"],
             )
 
-            async for mode, chunk in self._async_stream(stream):
+            # astream returns an async generator directly
+            async for mode, chunk in stream:
                 if mode == "messages":
                     token, metadata = chunk
                     if token.content:
@@ -155,13 +157,13 @@ class StreamHandler:
         self._interrupted = False
 
         try:
-            stream = self.agent.stream(
+            stream = self.agent.astream(
                 Command(resume={"decisions": [decision]}),
                 config=self.config,
                 stream_mode=["updates", "messages"],
             )
 
-            async for mode, chunk in self._async_stream(stream):
+            async for mode, chunk in stream:
                 if mode == "messages":
                     token, metadata = chunk
                     if token.content:
@@ -195,11 +197,6 @@ class StreamHandler:
                 type=EventType.ERROR,
                 data=str(e)
             )
-
-    async def _async_stream(self, stream):
-        """Convert sync stream to async iterator."""
-        for item in stream:
-            yield item
 
     def is_interrupted(self) -> bool:
         """Check if stream was interrupted."""
