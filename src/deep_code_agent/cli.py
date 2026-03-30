@@ -18,6 +18,40 @@ def _format_args(args: dict[str, Any], max_length: int = 200) -> str:
     return "\n".join(formatted)
 
 
+def _initialize_agent(args, codebase_dir: str) -> Any:
+    """Initialize model and agent for both CLI and TUI modes.
+
+    Args:
+        args: Parsed command line arguments
+        codebase_dir: Path to codebase directory
+
+    Returns:
+        Agent instance
+    """
+    from dotenv import load_dotenv
+    from langgraph.checkpoint.memory import InMemorySaver
+    from deep_code_agent.code_agent import create_code_agent
+    from deep_code_agent.models.llms.langchain_chat import create_chat_model
+
+    load_dotenv()
+
+    model = None
+    if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
+        model = create_chat_model(
+            model_name=args.model_name,
+            model_provider=args.model_provider,
+            api_key=args.api_key,
+            base_url=args.base_url,
+        )
+
+    return create_code_agent(
+        codebase_dir=codebase_dir,
+        model=model,
+        checkpointer=InMemorySaver(),
+        backend_type=args.backend_type,
+    )
+
+
 def _get_user_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any] | None:
     """Get user decision for pending action.
 
@@ -164,15 +198,6 @@ def main() -> None:
         _run_tui_mode(args)
         return
 
-    # Only import heavy dependencies after confirming we're not just showing help
-    from dotenv import load_dotenv
-    from langgraph.checkpoint.memory import InMemorySaver
-
-    from deep_code_agent.code_agent import create_code_agent
-    from deep_code_agent.models.llms.langchain_chat import create_chat_model
-
-    load_dotenv()
-
     # Get codebase directory
     print("Welcome to Deep Code Agent!")
     codebase_dir = input("Enter your codebase directory path: ").strip()
@@ -182,21 +207,7 @@ def main() -> None:
         return
 
     try:
-        model = None
-        if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
-            model = create_chat_model(
-                model_name=args.model_name,
-                model_provider=args.model_provider,
-                api_key=args.api_key,
-                base_url=args.base_url,
-            )
-
-        agent = create_code_agent(
-            codebase_dir=codebase_dir,
-            model=model,
-            checkpointer=InMemorySaver(),
-            backend_type=args.backend_type,
-        )
+        agent = _initialize_agent(args, codebase_dir)
         print(f"\n✓ Agent initialized for codebase: {codebase_dir}")
         print("Type 'exit', 'quit', or 'bye' to end the session")
         print("Type 'help' for available commands")
@@ -253,14 +264,7 @@ def _run_tui_mode(args) -> None:
         args: Parsed command line arguments
     """
     import os
-    from dotenv import load_dotenv
-    from langgraph.checkpoint.memory import InMemorySaver
-
-    from deep_code_agent.code_agent import create_code_agent
-    from deep_code_agent.models.llms.langchain_chat import create_chat_model
     from deep_code_agent.tui import DeepCodeAgentApp
-
-    load_dotenv()
 
     # Get codebase directory
     codebase_dir = os.getcwd()
@@ -269,21 +273,7 @@ def _run_tui_mode(args) -> None:
     print(f"📁 Codebase: {codebase_dir}")
 
     try:
-        model = None
-        if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
-            model = create_chat_model(
-                model_name=args.model_name,
-                model_provider=args.model_provider,
-                api_key=args.api_key,
-                base_url=args.base_url,
-            )
-
-        agent = create_code_agent(
-            codebase_dir=codebase_dir,
-            model=model,
-            checkpointer=InMemorySaver(),
-            backend_type=args.backend_type,
-        )
+        agent = _initialize_agent(args, codebase_dir)
 
         session_info = {
             "model": args.model_name or "default",

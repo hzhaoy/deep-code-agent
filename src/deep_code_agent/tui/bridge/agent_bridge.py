@@ -39,14 +39,12 @@ class AgentBridge:
         self.app = app
         self.config: dict = {"configurable": {"thread_id": "default"}}
         self.stream_handler: StreamHandler | None = None
-        self._current_request: asyncio.Task | None = None
-        self._pending_decision: asyncio.Future | None = None
-        self._streaming_content = ""
+        self._streaming_chunks: list[str] = []
         self._streaming_bubble = None
         self._last_ui_error: str | None = None
 
     def _reset_streaming_state(self) -> None:
-        self._streaming_content = ""
+        self._streaming_chunks.clear()
         self._streaming_bubble = None
 
     def _run_on_app(self, func, *args, **kwargs) -> None:
@@ -119,8 +117,8 @@ class AgentBridge:
 
     def cancel_current(self) -> None:
         """Cancel the current request."""
-        if self._current_request and not self._current_request.done():
-            self._current_request.cancel()
+        if self.stream_handler and self.stream_handler.is_interrupted():
+            return
 
     async def _dispatch_event(self, event: AgentEvent) -> None:
         """Dispatch an event to the TUI.
@@ -171,15 +169,16 @@ class AgentBridge:
                     input_box.set_disabled(True)
 
                 elif event.type == EventType.MESSAGE_CHUNK:
-                    self._streaming_content += event.data or ""
+                    self._streaming_chunks.append(event.data or "")
                     if self._streaming_bubble is None:
-                        self._streaming_bubble = chat_log.add_agent_message(self._streaming_content)
+                        self._streaming_bubble = chat_log.add_agent_message("".join(self._streaming_chunks))
                     else:
-                        self._streaming_bubble.update_content(self._streaming_content)
+                        self._streaming_bubble.update_content("".join(self._streaming_chunks))
                     status_bar.set_streaming()
 
                 elif event.type == EventType.MESSAGE_COMPLETE:
-                    content = event.data or self._streaming_content
+                    chunks = event.data if event.data else self._streaming_chunks
+                    content = chunks if isinstance(chunks, str) else "".join(chunks)
                     if self._streaming_bubble is None:
                         chat_log.add_agent_message(content)
                     else:

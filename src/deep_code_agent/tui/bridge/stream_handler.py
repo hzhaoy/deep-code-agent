@@ -53,8 +53,59 @@ class StreamHandler:
         """
         self.agent = agent
         self.config = config
-        self._current_message = ""
+        self._message_chunks: list[str] = []
         self._interrupted = False
+
+    async def _process_stream(
+        self,
+        stream,
+        include_tool_calls: bool = True
+    ) -> AsyncIterator[AgentEvent]:
+        """Process the agent stream and yield events.
+
+        Args:
+            stream: The async generator from agent.astream()
+            include_tool_calls: Whether to emit tool call events
+
+        Yields:
+            AgentEvent instances
+        """
+        async for mode, chunk in stream:
+            if mode == "messages":
+                token, metadata = chunk
+                if token.content:
+                    self._message_chunks.append(token.content)
+                    yield AgentEvent(
+                        type=EventType.MESSAGE_CHUNK,
+                        data=token.content,
+                        metadata=metadata
+                    )
+
+            elif mode == "updates":
+                # Check for interrupt
+                if "__interrupt__" in chunk:
+                    self._interrupted = True
+                    interrupt_data = chunk["__interrupt__"]
+                    yield AgentEvent(
+                        type=EventType.HITL_INTERRUPT,
+                        data=interrupt_data
+                    )
+                    return
+
+                # Check for tool calls
+                if include_tool_calls and "tools" in chunk:
+                    tool_data = chunk["tools"]
+                    if "messages" in tool_data:
+                        for msg in tool_data["messages"]:
+                            if hasattr(msg, "tool_calls"):
+                                for tc in msg.tool_calls:
+                                    yield AgentEvent(
+                                        type=EventType.TOOL_CALL,
+                                        data={
+                                            "name": tc.get("name", "unknown"),
+                                            "args": tc.get("args", {})
+                                        }
+                                    )
 
     async def process(
         self,
@@ -68,9 +119,7 @@ class StreamHandler:
         Yields:
             AgentEvent instances
         """
-        from langgraph.types import Command
-
-        self._current_message = ""
+        self._message_chunks.clear()
         self._interrupted = False
 
         try:
@@ -87,49 +136,14 @@ class StreamHandler:
                 stream_mode=["updates", "messages"],
             )
 
-            # astream returns an async generator directly
-            async for mode, chunk in stream:
-                if mode == "messages":
-                    token, metadata = chunk
-                    if token.content:
-                        self._current_message += token.content
-                        yield AgentEvent(
-                            type=EventType.MESSAGE_CHUNK,
-                            data=token.content,
-                            metadata=metadata
-                        )
-
-                elif mode == "updates":
-                    # Check for interrupt
-                    if "__interrupt__" in chunk:
-                        self._interrupted = True
-                        interrupt_data = chunk["__interrupt__"]
-                        yield AgentEvent(
-                            type=EventType.HITL_INTERRUPT,
-                            data=interrupt_data
-                        )
-                        return  # Stop processing, wait for resume
-
-                    # Check for tool calls
-                    if "tools" in chunk:
-                        tool_data = chunk["tools"]
-                        if "messages" in tool_data:
-                            for msg in tool_data["messages"]:
-                                if hasattr(msg, "tool_calls"):
-                                    for tc in msg.tool_calls:
-                                        yield AgentEvent(
-                                            type=EventType.TOOL_CALL,
-                                            data={
-                                                "name": tc.get("name", "unknown"),
-                                                "args": tc.get("args", {})
-                                            }
-                                        )
+            async for event in self._process_stream(stream, include_tool_calls=True):
+                yield event
 
             # Stream complete
-            if self._current_message:
+            if self._message_chunks:
                 yield AgentEvent(
                     type=EventType.MESSAGE_COMPLETE,
-                    data=self._current_message
+                    data="".join(self._message_chunks)
                 )
 
             yield AgentEvent(type=EventType.DONE)
@@ -154,6 +168,7 @@ class StreamHandler:
         """
         from langgraph.types import Command
 
+        self._message_chunks.clear()
         self._interrupted = False
 
         try:
@@ -163,31 +178,13 @@ class StreamHandler:
                 stream_mode=["updates", "messages"],
             )
 
-            async for mode, chunk in stream:
-                if mode == "messages":
-                    token, metadata = chunk
-                    if token.content:
-                        self._current_message += token.content
-                        yield AgentEvent(
-                            type=EventType.MESSAGE_CHUNK,
-                            data=token.content,
-                            metadata=metadata
-                        )
+            async for event in self._process_stream(stream, include_tool_calls=False):
+                yield event
 
-                elif mode == "updates":
-                    if "__interrupt__" in chunk:
-                        self._interrupted = True
-                        interrupt_data = chunk["__interrupt__"]
-                        yield AgentEvent(
-                            type=EventType.HITL_INTERRUPT,
-                            data=interrupt_data
-                        )
-                        return
-
-            if self._current_message:
+            if self._message_chunks:
                 yield AgentEvent(
                     type=EventType.MESSAGE_COMPLETE,
-                    data=self._current_message
+                    data="".join(self._message_chunks)
                 )
 
             yield AgentEvent(type=EventType.DONE)
