@@ -19,6 +19,9 @@ uv run deep-code-agent
 # Run with specific options
 uv run deep-code-agent --backend-type filesystem --model-name gpt-4
 
+# Run with TUI mode
+uv run deep-code-agent --tui
+
 # Run tests
 uv run pytest tests/
 
@@ -31,7 +34,7 @@ uv pip install -e .
 
 ## Project Structure
 
-```
+```text
 src/deep_code_agent/
 ├── __init__.py          # Package exports
 ├── __main__.py          # Module entry point
@@ -40,7 +43,24 @@ src/deep_code_agent/
 ├── prompts.py           # System prompts and subagents
 ├── code_agent.py        # Main agent creation
 ├── models/llms/         # LLM integrations
-└── tools/               # Agent tools
+├── tools/               # Agent tools
+└── tui/                 # Terminal User Interface
+    ├── app.py            # Main TUI application
+    ├── bridge/            # Agent-bridge layer
+    │   ├── agent_bridge.py
+    │   └── stream_handler.py
+    ├── screens/           # TUI screens
+    │   ├── main_screen.py
+    │   └── approval_modal.py
+    ├── widgets/           # Reusable widgets
+    │   ├── chat_log.py
+    │   ├── input_box.py
+    │   ├── message_bubble.py
+    │   ├── side_panel.py
+    │   ├── status_bar.py
+    │   └── tool_call_view.py
+    └── styles/            # TUI styles
+        └── main.tcss
 ```
 
 ## Key Patterns
@@ -104,14 +124,44 @@ The CLI provides interactive mode with HITL:
 # - Interrupt handling for HITL
 ```
 
+## TUI Mode (Terminal User Interface)
+
+The TUI provides a rich terminal interface with:
+
+- Streaming message display
+- Interactive tool call views
+- Side panel with session info
+- HITL approval modal dialogs
+
+```bash
+# Run in TUI mode
+uv run deep-code-agent --tui
+
+# TUI with custom model
+uv run deep-code-agent --tui --model-name gpt-4
+
+# TUI with filesystem backend
+uv run deep-code-agent --tui --backend-type filesystem
+```
+
+TUI Keybindings:
+
+- `Ctrl+C`: `Quit`
+- `Ctrl+D`: `Toggle Dark Mode`
+- `F1`: `Help`
+- `Ctrl+Q`: `Quit`
+- `Tab`: `Navigate widgets`
+
 ## Backend Types
 
 ### State Backend (`backend_type="state"`)
+
 - Uses `StateBackend` from deepagents
 - No tools mounted
 - Good for pure state-based workflows
 
 ### Filesystem Backend (`backend_type="filesystem"`)
+
 - Uses `FilesystemBackend` from deepagents
 - Mounts `terminal` tool for command execution
 - Good for file operations
@@ -119,6 +169,7 @@ The CLI provides interactive mode with HITL:
 ## Human-in-the-Loop (HITL)
 
 Default configuration requires approval for:
+
 - `write_file`: Writing new files
 - `edit_file`: Editing existing files
 - `execute`: Executing commands

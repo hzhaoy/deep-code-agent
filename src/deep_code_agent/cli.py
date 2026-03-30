@@ -18,6 +18,40 @@ def _format_args(args: dict[str, Any], max_length: int = 200) -> str:
     return "\n".join(formatted)
 
 
+def _initialize_agent(args, codebase_dir: str) -> Any:
+    """Initialize model and agent for both CLI and TUI modes.
+
+    Args:
+        args: Parsed command line arguments
+        codebase_dir: Path to codebase directory
+
+    Returns:
+        Agent instance
+    """
+    from dotenv import load_dotenv
+    from langgraph.checkpoint.memory import InMemorySaver
+    from deep_code_agent.code_agent import create_code_agent
+    from deep_code_agent.models.llms.langchain_chat import create_chat_model
+
+    load_dotenv()
+
+    model = None
+    if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
+        model = create_chat_model(
+            model_name=args.model_name,
+            model_provider=args.model_provider,
+            api_key=args.api_key,
+            base_url=args.base_url,
+        )
+
+    return create_code_agent(
+        codebase_dir=codebase_dir,
+        model=model,
+        checkpointer=InMemorySaver(),
+        backend_type=args.backend_type,
+    )
+
+
 def _get_user_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any] | None:
     """Get user decision for pending action.
 
@@ -156,17 +190,13 @@ def main() -> None:
     parser.add_argument("--api-key", default=None, help="API Key")
     parser.add_argument("--base-url", default=None, help="Base URL for model service")
     parser.add_argument("--thread-id", default="1", help="Thread ID for session")
+    parser.add_argument("--tui", action="store_true", help="Use TUI mode (experimental)")
 
     args = parser.parse_args()
 
-    # Only import heavy dependencies after confirming we're not just showing help
-    from dotenv import load_dotenv
-    from langgraph.checkpoint.memory import InMemorySaver
-
-    from deep_code_agent.code_agent import create_code_agent
-    from deep_code_agent.models.llms.langchain_chat import create_chat_model
-
-    load_dotenv()
+    if args.tui:
+        _run_tui_mode(args)
+        return
 
     # Get codebase directory
     print("Welcome to Deep Code Agent!")
@@ -177,21 +207,7 @@ def main() -> None:
         return
 
     try:
-        model = None
-        if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
-            model = create_chat_model(
-                model_name=args.model_name,
-                model_provider=args.model_provider,
-                api_key=args.api_key,
-                base_url=args.base_url,
-            )
-
-        agent = create_code_agent(
-            codebase_dir=codebase_dir,
-            model=model,
-            checkpointer=InMemorySaver(),
-            backend_type=args.backend_type,
-        )
+        agent = _initialize_agent(args, codebase_dir)
         print(f"\n✓ Agent initialized for codebase: {codebase_dir}")
         print("Type 'exit', 'quit', or 'bye' to end the session")
         print("Type 'help' for available commands")
@@ -239,3 +255,42 @@ def main() -> None:
     except Exception as e:
         print(f"\nFailed to initialize agent: {str(e)}")
         print("Please check your input and try again.")
+
+
+def _run_tui_mode(args) -> None:
+    """Run the TUI mode.
+
+    Args:
+        args: Parsed command line arguments
+    """
+    import os
+    from deep_code_agent.tui import DeepCodeAgentApp
+
+    # Get codebase directory
+    codebase_dir = os.getcwd()
+
+    print(f"🚀 Starting Deep Code Agent TUI...")
+    print(f"📁 Codebase: {codebase_dir}")
+
+    try:
+        agent = _initialize_agent(args, codebase_dir)
+
+        session_info = {
+            "model": args.model_name or "default",
+            "session_id": args.thread_id,
+            "codebase_dir": codebase_dir,
+        }
+
+        app = DeepCodeAgentApp(
+            agent=agent,
+            config={"configurable": {"thread_id": args.thread_id}},
+            session_info=session_info,
+        )
+
+        app.run()
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise

@@ -1,0 +1,83 @@
+/* Deep Code Agent TUI - Main Stylesheet */
+
+/* Global settings */
+* {
+    transition: all 200ms;
+}
+
+/* Main layout */
+Screen {
+    background: #1a1a2e;
+    color: #eee;
+}
+
+#main-container {
+    height: 100%;
+    width: 100%;
+}
+
+#sidebar {
+    width: 25%;
+    min-width: 20;
+    max-width: 40;
+    border-right: solid #4a5568;
+    background: #16213e;
+}
+
+#content {
+    width: 75%;
+    height: 100%;
+}
+
+/* Chat log */
+#chat_log {
+    height: 1fr;
+    border: solid #2d3748;
+    padding: 0 1;
+    background: #1a1a2e;
+}
+
+/* Input box */
+#input_box {
+    height: auto;
+    margin-top: 1;
+    background: #16213e;
+}
+
+#user-input {
+    width: 1fr;
+}
+
+#send-button {
+    width: auto;
+    margin-left: 1;
+}
+
+/* Status bar */
+#status_bar {
+    height: 1;
+    background: #0f3460;
+    color: #eee;
+    content-align: center middle;
+}
+
+/* Message bubbles */
+MessageBubble {
+    margin: 1 0;
+    padding: 1;
+}
+
+MessageBubble.user {
+    background: #2d5a87;
+    border-right: thick #4a90d9;
+}
+
+MessageBubble.agent {
+    background: #1e3a5f;
+    border-left: thick #4ecdc4;
+}
+
+MessageBubble.system {
+    background: #3d3d3d;
+    text-style: italic;
+}
