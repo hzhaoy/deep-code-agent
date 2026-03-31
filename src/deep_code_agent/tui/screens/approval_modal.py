@@ -29,6 +29,7 @@ class ApprovalModal(ModalScreen):
         ("1", "select_index(0)", "Select 1"),
         ("2", "select_index(1)", "Select 2"),
         ("3", "select_index(2)", "Select 3"),
+        ("4", "select_index(3)", "Select 4"),
         ("enter", "confirm_selection", "Confirm"),
         ("escape", "cancel", "Cancel"),
     ]
@@ -123,17 +124,23 @@ class ApprovalModal(ModalScreen):
             {
                 "key": "1",
                 "label": "Approve",
-                "description": "✓ Allow execution",
+                "description": "✓ Allow this once",
                 "action": "approve"
             },
             {
                 "key": "2",
+                "label": "Approve All for Tool",
+                "description": "✓ Always approve this tool",
+                "action": "approve_all"
+            },
+            {
+                "key": "3",
                 "label": "Reject",
                 "description": "❌ Block execution",
                 "action": "reject"
             },
             {
-                "key": "3",
+                "key": "4",
                 "label": "Cancel",
                 "description": "🚫 Dismiss dialog",
                 "action": "cancel"
@@ -206,6 +213,8 @@ class ApprovalModal(ModalScreen):
             action = self.options[self.selected_index]["action"]
             if action == "approve":
                 self._approve()
+            elif action == "approve_all":
+                self._approve_all()
             elif action == "reject":
                 self._reject()
             elif action == "cancel":
@@ -218,6 +227,16 @@ class ApprovalModal(ModalScreen):
     def _approve(self) -> None:
         """Approve the action."""
         decision = {"type": "approve"}
+        self.callback(decision)
+        self.dismiss()
+
+    def _approve_all(self) -> None:
+        """Approve and add tool to auto-approve list."""
+        decision = {
+            "type": "approve",
+            "add_to_auto_approve": True,
+            "tool_name": self.tool_name
+        }
         self.callback(decision)
         self.dismiss()
 

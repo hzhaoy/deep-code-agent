@@ -236,6 +236,21 @@ class AgentBridge:
                     from deep_code_agent.tui.screens.approval_modal import ApprovalModal
 
                     def on_decision(decision: dict) -> None:
+                        # Check if tool should be added to auto-approve
+                        if decision.get("add_to_auto_approve", False):
+                            tool_to_add = decision.get("tool_name", tool_name)
+                            if tool_to_add and tool_to_add not in auto_approve_tools:
+                                app.call_from_thread(
+                                    setattr, app, 'auto_approve_tools',
+                                    auto_approve_tools + [tool_to_add]
+                                )
+                                app.call_from_thread(
+                                    app.notify,
+                                    f"✓ Auto-approve enabled for: {tool_to_add}",
+                                    title="Auto-Approve",
+                                    severity="information"
+                                )
+
                         asyncio.create_task(self.resume_with_decision(decision))
 
                     modal = ApprovalModal(interrupt_data, callback=on_decision)
