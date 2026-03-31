@@ -20,7 +20,6 @@ class SelectableOption(Horizontal):
         width: 100%;
         height: auto;
         padding: 0 1;
-        cursor: pointer;
     }
 
     SelectableOption:focus {

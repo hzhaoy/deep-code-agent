@@ -3,16 +3,18 @@
 from typing import Callable
 
 from textual.app import ComposeResult
+from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Label, Static, TextArea
+from textual.widgets import Static
+
+from deep_code_agent.tui.widgets.selectable_option import SelectableOption
 
 
 class ApprovalModal(ModalScreen):
     """Modal screen for HITL action approval.
 
-    Displays tool call details and provides options to approve,
-    edit, or reject the action. Can also provide feedback.
+    Displays tool call details and provides keyboard-navigable options
+    for approve, reject, or cancel the action.
 
     Args:
         interrupt_data: Data from LangGraph interrupt
@@ -20,9 +22,15 @@ class ApprovalModal(ModalScreen):
     """
 
     BINDINGS = [
+        ("up", "navigate_up", "Previous Option"),
+        ("down", "navigate_down", "Next Option"),
+        ("k", "navigate_up", "Previous Option"),
+        ("j", "navigate_down", "Next Option"),
+        ("1", "select_index(0)", "Select 1"),
+        ("2", "select_index(1)", "Select 2"),
+        ("3", "select_index(2)", "Select 3"),
+        ("enter", "confirm_selection", "Confirm"),
         ("escape", "cancel", "Cancel"),
-        ("a", "approve", "Approve"),
-        ("r", "reject", "Reject"),
     ]
 
     DEFAULT_CSS = """
@@ -66,24 +74,8 @@ class ApprovalModal(ModalScreen):
         margin-bottom: 1;
     }
 
-    ApprovalModal #dialog-buttons {
-        height: auto;
-        align: center middle;
+    ApprovalModal #options-list {
         margin-top: 1;
-    }
-
-    ApprovalModal #dialog-buttons Button {
-        margin: 0 1;
-    }
-
-    ApprovalModal #feedback-area {
-        margin-top: 1;
-        height: auto;
-        display: none;
-    }
-
-    ApprovalModal #feedback-area.visible {
-        display: block;
     }
     """
 
@@ -96,7 +88,9 @@ class ApprovalModal(ModalScreen):
         super().__init__(**kwargs)
         self.interrupt_data = interrupt_data
         self.callback = callback
+        self.selected_index = 0
         self._extract_tool_call()
+        self._setup_options()
 
     def _extract_tool_call(self) -> None:
         """Extract tool call info from interrupt data."""
@@ -104,33 +98,47 @@ class ApprovalModal(ModalScreen):
         self.tool_args = {}
 
         try:
-            # Handle different interrupt data structures
             if isinstance(self.interrupt_data, list) and len(self.interrupt_data) > 0:
                 item = self.interrupt_data[0]
-                if hasattr(item, 'value'):
-                    value = item.value
-                else:
-                    value = item
+                value = item.value if hasattr(item, 'value') else item
             elif isinstance(self.interrupt_data, dict):
                 value = self.interrupt_data
             else:
                 value = {}
 
-            # Extract action requests
             action_requests = value.get("action_requests", [])
             if action_requests:
                 action = action_requests[0]
-                if hasattr(action, 'action'):
-                    action_data = action.action
-                else:
-                    action_data = action
-
+                action_data = action.action if hasattr(action, 'action') else action
                 self.tool_name = action_data.get("name", "unknown")
                 self.tool_args = action_data.get("args", {})
 
         except Exception as e:
             self.tool_name = "error"
             self.tool_args = {"error": str(e)}
+
+    def _setup_options(self) -> None:
+        """Setup options for the modal."""
+        self.options = [
+            {
+                "key": "1",
+                "label": "Approve",
+                "description": "✓ Allow execution",
+                "action": "approve"
+            },
+            {
+                "key": "2",
+                "label": "Reject",
+                "description": "❌ Block execution",
+                "action": "reject"
+            },
+            {
+                "key": "3",
+                "label": "Cancel",
+                "description": "🚫 Dismiss dialog",
+                "action": "cancel"
+            }
+        ]
 
     def compose(self) -> ComposeResult:
         """Compose the approval modal."""
@@ -141,14 +149,15 @@ class ApprovalModal(ModalScreen):
                 yield Static(f"Tool: {self.tool_name}", id="tool-name")
                 yield Static(self._format_args(self.tool_args))
 
-            with Horizontal(id="dialog-buttons"):
-                yield Button("✅ Approve (a)", variant="success", id="btn-approve")
-                yield Button("❌ Reject (r)", variant="error", id="btn-reject")
-                yield Button("🚫 Cancel", variant="default", id="btn-cancel")
-
-            with Vertical(id="feedback-area"):
-                yield Static("Feedback (optional):")
-                yield TextArea(id="feedback-text")
+            with Vertical(id="options-list"):
+                yield Static("Choose an action:")
+                for i, option in enumerate(self.options):
+                    yield SelectableOption(
+                        key=option["key"],
+                        label=option["label"],
+                        description=option["description"],
+                        selected=(i == self.selected_index)
+                    )
 
     def _format_args(self, args: dict) -> str:
         """Format tool arguments for display."""
@@ -158,34 +167,53 @@ class ApprovalModal(ModalScreen):
         lines = ["Arguments:"]
         for key, value in args.items():
             value_str = str(value)
-            # Truncate very long values
             if len(value_str) > 200:
                 value_str = value_str[:200] + "..."
             lines.append(f"  {key}: {value_str}")
         return "\n".join(lines)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button presses."""
-        button_id = event.button.id
+    def _update_selection(self) -> None:
+        """Update visual selection state."""
+        try:
+            options_container = self.query_one("#options-list", Vertical)
+            selectable_options = options_container.query(SelectableOption)
+            for i, widget in enumerate(selectable_options):
+                widget.set_selected(i == self.selected_index)
+        except Exception:
+            pass
 
-        if button_id == "btn-approve":
-            self._approve()
-        elif button_id == "btn-reject":
-            self._reject()
-        elif button_id == "btn-cancel":
-            self._cancel()
+    def action_navigate_up(self) -> None:
+        """Navigate to previous option."""
+        if self.selected_index > 0:
+            self.selected_index -= 1
+            self._update_selection()
 
-    def action_approve(self) -> None:
-        """Approve action (keyboard shortcut)."""
-        self._approve()
+    def action_navigate_down(self) -> None:
+        """Navigate to next option."""
+        if self.selected_index < len(self.options) - 1:
+            self.selected_index += 1
+            self._update_selection()
 
-    def action_reject(self) -> None:
-        """Reject action (keyboard shortcut)."""
-        self._reject()
+    def action_select_index(self, index: int) -> None:
+        """Select option by index."""
+        if 0 <= index < len(self.options):
+            self.selected_index = index
+            self._update_selection()
+
+    def action_confirm_selection(self) -> None:
+        """Confirm current selection."""
+        if 0 <= self.selected_index < len(self.options):
+            action = self.options[self.selected_index]["action"]
+            if action == "approve":
+                self._approve()
+            elif action == "reject":
+                self._reject()
+            elif action == "cancel":
+                self._cancel()
 
     def action_cancel(self) -> None:
-        """Cancel modal (keyboard shortcut)."""
-        self._cancel()
+        """Cancel the modal."""
+        self.dismiss()
 
     def _approve(self) -> None:
         """Approve the action."""
@@ -195,22 +223,13 @@ class ApprovalModal(ModalScreen):
 
     def _reject(self) -> None:
         """Reject the action."""
-        # Show feedback area
-        feedback_area = self.query_one("#feedback-area")
-        feedback_area.add_class("visible")
-        feedback_text = self.query_one("#feedback-text", TextArea)
-        feedback_text.focus()
-
-        # Get feedback
-        feedback = feedback_text.text.strip()
         decision = {
             "type": "reject",
-            "message": feedback or "Action rejected by user"
+            "message": "Action rejected by user"
         }
         self.callback(decision)
         self.dismiss()
 
     def _cancel(self) -> None:
         """Cancel the modal."""
-        # Treat as reject with no callback
         self.dismiss()
