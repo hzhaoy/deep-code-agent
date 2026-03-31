@@ -47,6 +47,32 @@ class AgentBridge:
         self._streaming_chunks.clear()
         self._streaming_bubble = None
 
+    def _extract_tool_name_from_interrupt(self, interrupt_data: dict) -> str:
+        """Extract tool name from interrupt data.
+
+        Args:
+            interrupt_data: Interrupt data from LangGraph
+
+        Returns:
+            Tool name or "unknown"
+        """
+        try:
+            if isinstance(interrupt_data, list) and len(interrupt_data) > 0:
+                item = interrupt_data[0]
+                value = item.value if hasattr(item, 'value') else item
+            elif isinstance(interrupt_data, dict):
+                value = interrupt_data
+            else:
+                return "unknown"
+
+            action_requests = value.get("action_requests", [])
+            if action_requests:
+                action = action_requests[0]
+                action_data = action.action if hasattr(action, 'action') else action
+                return action_data.get("name", "unknown")
+        except Exception:
+            return "unknown"
+
     def _run_on_app(self, func, *args, **kwargs) -> None:
         if self.app is None:
             return
@@ -196,6 +222,17 @@ class AgentBridge:
                 elif event.type == EventType.HITL_INTERRUPT:
                     status_bar.set_waiting_approval()
                     interrupt_data = event.data
+
+                    # Check auto-approve
+                    tool_name = self._extract_tool_name_from_interrupt(interrupt_data)
+                    auto_approve_tools = getattr(app, "auto_approve_tools", [])
+
+                    if tool_name in auto_approve_tools:
+                        # Auto-approve without showing modal
+                        asyncio.create_task(self.resume_with_decision({"type": "approve"}))
+                        return
+
+                    # Show approval modal
                     from deep_code_agent.tui.screens.approval_modal import ApprovalModal
 
                     def on_decision(decision: dict) -> None:
