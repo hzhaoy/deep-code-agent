@@ -99,6 +99,7 @@ class ApprovalModal(ModalScreen):
         self.tool_args = {}
 
         try:
+            # Handle different interrupt data structures
             if isinstance(self.interrupt_data, list) and len(self.interrupt_data) > 0:
                 item = self.interrupt_data[0]
                 value = item.value if hasattr(item, 'value') else item
@@ -107,16 +108,47 @@ class ApprovalModal(ModalScreen):
             else:
                 value = {}
 
+            # Try multiple paths to find tool call information
+            # Path 1: action_requests (common in deepagents)
             action_requests = value.get("action_requests", [])
             if action_requests:
                 action = action_requests[0]
                 action_data = action.action if hasattr(action, 'action') else action
                 self.tool_name = action_data.get("name", "unknown")
                 self.tool_args = action_data.get("args", {})
+                return
+
+            # Path 2: tool_calls (common in LangGraph)
+            tool_calls = value.get("tool_calls", [])
+            if tool_calls:
+                tc = tool_calls[0]
+                tc_data = tc if isinstance(tc, dict) else getattr(tc, 'model_dump', lambda: {})()
+                self.tool_name = tc_data.get("name", "unknown")
+                self.tool_args = tc_data.get("args", {})
+                return
+
+            # Path 3: Check for nested "action" key at top level
+            if "action" in value:
+                action = value["action"]
+                action_data = action if isinstance(action, dict) else getattr(action, 'model_dump', lambda: {})()
+                self.tool_name = action_data.get("name", "unknown")
+                self.tool_args = action_data.get("args", {})
+                return
+
+            # Path 4: Look in messages for tool calls
+            if "messages" in value:
+                messages = value["messages"]
+                if messages:
+                    msg = messages[0]
+                    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                        tc = msg.tool_calls[0]
+                        self.tool_name = tc.get("name", "unknown")
+                        self.tool_args = tc.get("args", {})
+                        return
 
         except Exception as e:
             self.tool_name = "error"
-            self.tool_args = {"error": str(e)}
+            self.tool_args = {"error": str(e), "debug": str(self.interrupt_data)[:200]}
 
     def _setup_options(self) -> None:
         """Setup options for the modal."""
