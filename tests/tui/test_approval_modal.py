@@ -82,8 +82,11 @@ def test_approval_modal_down_navigation():
             modal.action_navigate_down()
             assert modal.selected_index == 2
 
-            # Navigate down at last index (should stay at 2)
             modal.action_navigate_down()
-            assert modal.selected_index == 2
+            assert modal.selected_index == 3
+
+            # Navigate down at last index (should stay at 3)
+            modal.action_navigate_down()
+            assert modal.selected_index == 3
 
     asyncio.run(run_test())
