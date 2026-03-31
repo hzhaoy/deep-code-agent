@@ -282,12 +282,9 @@ class AgentBridge:
                         if decision.get("add_to_auto_approve", False):
                             tool_to_add = decision.get("tool_name", tool_name)
                             if tool_to_add and tool_to_add not in auto_approve_tools:
-                                app.call_from_thread(
-                                    setattr, app, 'auto_approve_tools',
-                                    auto_approve_tools + [tool_to_add]
-                                )
-                                app.call_from_thread(
-                                    app.notify,
+                                # We're already in the main thread, so we can set directly
+                                setattr(app, 'auto_approve_tools', auto_approve_tools + [tool_to_add])
+                                app.notify(
                                     f"✓ Auto-approve enabled for: {tool_to_add}",
                                     title="Auto-Approve",
                                     severity="information"
