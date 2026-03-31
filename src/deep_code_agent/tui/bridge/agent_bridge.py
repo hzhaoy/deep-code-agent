@@ -42,6 +42,7 @@ class AgentBridge:
         self._streaming_chunks: list[str] = []
         self._streaming_bubble = None
         self._last_ui_error: str | None = None
+        self._active_tool_widget = None
 
     def _reset_streaming_state(self) -> None:
         self._streaming_chunks.clear()
@@ -216,8 +217,49 @@ class AgentBridge:
 
                 elif event.type == EventType.TOOL_CALL:
                     tool_data = event.data or {}
-                    chat_log.add_tool_call(tool_name=tool_data.get("name", "unknown"), args=tool_data.get("args", {}))
-                    side_panel.add_tool_call(tool_name=tool_data.get("name", "unknown"), args=tool_data.get("args", {}))
+                    tool_name = tool_data.get("name", "unknown")
+                    tool_args = tool_data.get("args", {})
+
+                    # Use new widget
+                    if hasattr(chat_log, 'add_tool_call_widget'):
+                        widget = chat_log.add_tool_call_widget(
+                            tool_name=tool_name,
+                            args=tool_args,
+                            status="pending"
+                        )
+                        self._active_tool_widget = widget
+                    else:
+                        # Fallback to old method
+                        chat_log.add_tool_call(tool_name=tool_name, args=tool_args)
+
+                    side_panel.add_tool_call(tool_name=tool_name, args=tool_args)
+
+                elif event.type == EventType.TOOL_START:
+                    # Update tool status to running
+                    if self._active_tool_widget is not None:
+                        self._run_on_app(self._active_tool_widget.update_status, "running")
+
+                elif event.type == EventType.TOOL_SUCCESS:
+                    # Update tool status to success with result
+                    result = event.data or ""
+                    if self._active_tool_widget is not None:
+                        self._run_on_app(
+                            self._active_tool_widget.update_result,
+                            result,
+                            "success"
+                        )
+                    self._active_tool_widget = None
+
+                elif event.type == EventType.TOOL_ERROR:
+                    # Update tool status to error with error message
+                    error = event.data or "Unknown error"
+                    if self._active_tool_widget is not None:
+                        self._run_on_app(
+                            self._active_tool_widget.update_result,
+                            f"Error: {error}",
+                            "error"
+                        )
+                    self._active_tool_widget = None
 
                 elif event.type == EventType.HITL_INTERRUPT:
                     status_bar.set_waiting_approval()
