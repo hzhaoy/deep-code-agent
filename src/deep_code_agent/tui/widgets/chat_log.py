@@ -90,8 +90,6 @@ class ChatLog(VerticalScroll):
             args: The tool arguments
         """
         # Format the tool call nicely
-        args_str = "\n".join(f"  {k}: {v!r}" for k, v in args.items())
-        content = f"🔧 Tool Call: {tool_name}\n{args_str}"
 
         bubble = MessageBubble(content, role="system")
         self.mount(bubble)
@@ -127,7 +125,6 @@ class ChatLog(VerticalScroll):
         self.mount(widget)
         self._scroll_to_bottom()
         return widget
-\n\n    def clear_chat(self) -> None:
         """Clear all messages from the chat log."""
         # Remove all children (MessageBubble widgets)
         for child in list(self.children):
@@ -142,3 +139,33 @@ class ChatLog(VerticalScroll):
         """Called when the widget is mounted."""
         # Focus the chat log by default for keyboard navigation
         self.focus()
+
+    def add_tool_call_widget(
+        self,
+        tool_name: str,
+        args: dict,
+        status: str = "pending",
+        result: str | None = None
+    ):
+        """Add a tool call widget to the chat log.
+
+        Args:
+            tool_name: The name of the tool being called
+            args: The tool arguments
+            status: Execution status (pending, running, success, error)
+            result: Optional tool execution result
+
+        Returns:
+            The created ToolCallView widget
+        """
+        from deep_code_agent.tui.widgets.tool_call_view import ToolCallView
+
+        widget = ToolCallView(
+            tool_name=tool_name,
+            args=args,
+            status=status,
+            result=result
+        )
+        self.mount(widget)
+        self._scroll_to_bottom()
+        return widget
