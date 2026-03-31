@@ -12,7 +12,10 @@ class EventType(Enum):
     MESSAGE_CHUNK = auto()       # LLM token/chunk
     MESSAGE_COMPLETE = auto()    # Full message complete
     TOOL_CALL = auto()           # Tool being called
-    TOOL_RESULT = auto()         # Tool execution result
+    TOOL_START = auto()         # Tool execution started
+    TOOL_SUCCESS = auto()        # Tool execution succeeded
+    TOOL_ERROR = auto()         # Tool execution failed
+    TOOL_RESULT = auto()         # Tool execution result (legacy)
     HITL_INTERRUPT = auto()      # Human-in-the-loop approval needed
     ERROR = auto()               # Error occurred
     DONE = auto()                # Stream complete
