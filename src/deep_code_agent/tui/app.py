@@ -39,12 +39,13 @@ class DeepCodeAgentApp(App):
     # Reactive state
     dark = reactive(True)
     session_info = reactive({})
+    auto_approve_tools = reactive([])
 
     def __init__(self, agent: Any, config: dict | None = None, session_info: dict | None = None, **kwargs):
         """Initialize the TUI app.
 
         Args:
-            agent: LangGraph agent instance
+            agent: LangGraph agent
             config: Optional RunnableConfig dict
             session_info: Optional session metadata
             **kwargs: Additional arguments for App
@@ -53,6 +54,7 @@ class DeepCodeAgentApp(App):
         self.agent = agent
         self.config = config or {"configurable": {"thread_id": "default"}}
         self.session_info = session_info or {}
+        self.auto_approve_tools = []
 
         # Create bridge
         self.bridge = AgentBridge(agent, self)
