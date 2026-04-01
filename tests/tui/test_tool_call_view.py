@@ -26,3 +26,17 @@ def test_tool_call_view_displays_result():
 
     import asyncio
     asyncio.run(run_test())
+
+
+def test_tool_call_view_can_update_args_after_mount():
+    from deep_code_agent.tui.widgets.tool_call_view import ToolCallView
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            widget = ToolCallView(tool_name="write_file", args={}, status="pending")
+            await pilot.app.mount(widget)
+            widget.update_args({"file_path": "x.txt", "content": "hello"})
+            assert widget.args.get("file_path") == "x.txt"
+
+    import asyncio
+    asyncio.run(run_test())

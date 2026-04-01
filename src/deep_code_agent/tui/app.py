@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 from textual.app import App, ComposeResult
@@ -55,6 +56,7 @@ class DeepCodeAgentApp(App):
         self.config = config or {"configurable": {"thread_id": "default"}}
         self.session_info = session_info or {}
         self.auto_approve_tools = []
+        self.debug_tool_calls = os.getenv("DEBUG_TOOL_CALLS", "0").strip().lower() in {"1", "true", "yes", "on"}
 
         # Create bridge
         self.bridge = AgentBridge(agent, self)

@@ -90,55 +90,10 @@ class ChatLog(VerticalScroll):
             args: The tool arguments
         """
         # Format the tool call nicely
-
+        content = f"🔧 Tool call: {tool_name}"
         bubble = MessageBubble(content, role="system")
         self.mount(bubble)
         self._scroll_to_bottom()
-
-    
-    def add_tool_call_widget(
-        self,
-        tool_name: str,
-        args: dict,
-        status: str = "pending",
-        result: str | None = None
-    ):
-        """Add a tool call widget to the chat log.
-
-        Args:
-            tool_name: The name of the tool being called
-            args: The tool arguments
-            status: Execution status (pending, running, success, error)
-            result: Optional tool execution result
-
-        Returns:
-            The created ToolCallView widget
-        """
-        from deep_code_agent.tui.widgets.tool_call_view import ToolCallView
-
-        widget = ToolCallView(
-            tool = tool_name,
-            args=args,
-            status=status,
-            result=result
-        )
-        self.mount(widget)
-        self._scroll_to_bottom()
-        return widget
-        """Clear all messages from the chat log."""
-        # Remove all children (MessageBubble widgets)
-        for child in list(self.children):
-            child.remove()
-
-    def _scroll_to_bottom(self) -> None:
-        """Scroll to the bottom of the chat log."""
-        if self.auto_scroll:
-            self.scroll_end(animate=False)
-
-    def on_mount(self) -> None:
-        """Called when the widget is mounted."""
-        # Focus the chat log by default for keyboard navigation
-        self.focus()
 
     def add_tool_call_widget(
         self,
@@ -169,3 +124,19 @@ class ChatLog(VerticalScroll):
         self.mount(widget)
         self._scroll_to_bottom()
         return widget
+
+    def clear_messages(self) -> None:
+        """Clear all messages from the chat log."""
+        # Remove all children (MessageBubble widgets)
+        for child in list(self.children):
+            child.remove()
+
+    def _scroll_to_bottom(self) -> None:
+        """Scroll to the bottom of the chat log."""
+        if self.auto_scroll:
+            self.scroll_end(animate=False)
+
+    def on_mount(self) -> None:
+        """Called when the widget is mounted."""
+        # Focus the chat log by default for keyboard navigation
+        self.focus()

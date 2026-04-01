@@ -80,12 +80,7 @@ class ApprovalModal(ModalScreen):
     }
     """
 
-    def __init__(
-        self,
-        interrupt_data: dict,
-        callback: Callable[[dict], None],
-        **kwargs
-    ):
+    def __init__(self, interrupt_data: dict, callback: Callable[[dict], None], **kwargs):
         super().__init__(**kwargs)
         self.interrupt_data = interrupt_data
         self.callback = callback
@@ -97,23 +92,35 @@ class ApprovalModal(ModalScreen):
         """Extract tool call info from interrupt data."""
         self.tool_name = "unknown"
         self.tool_args = {}
+        self.action_requests = []
 
         try:
             # Handle different interrupt data structures
-            if isinstance(self.interrupt_data, list) and len(self.interrupt_data) > 0:
+            if isinstance(self.interrupt_data, (list, tuple)) and len(self.interrupt_data) > 0:
                 item = self.interrupt_data[0]
-                value = item.value if hasattr(item, 'value') else item
+                if hasattr(item, "value"):
+                    value = item.value
+                elif isinstance(item, dict) and "value" in item:
+                    value = item.get("value")
+                else:
+                    value = item
             elif isinstance(self.interrupt_data, dict):
-                value = self.interrupt_data
+                value = self.interrupt_data.get("value") if "value" in self.interrupt_data else self.interrupt_data
+            elif not isinstance(self.interrupt_data, (list, dict)) and hasattr(self.interrupt_data, "value"):
+                value = self.interrupt_data.value
             else:
+                value = {}
+
+            if not isinstance(value, dict):
                 value = {}
 
             # Try multiple paths to find tool call information
             # Path 1: action_requests (common in deepagents)
             action_requests = value.get("action_requests", [])
             if action_requests:
+                self.action_requests = action_requests
                 action = action_requests[0]
-                action_data = action.action if hasattr(action, 'action') else action
+                action_data = action.action if hasattr(action, "action") else action
                 self.tool_name = action_data.get("name", "unknown")
                 self.tool_args = action_data.get("args", {})
                 return
@@ -122,7 +129,7 @@ class ApprovalModal(ModalScreen):
             tool_calls = value.get("tool_calls", [])
             if tool_calls:
                 tc = tool_calls[0]
-                tc_data = tc if isinstance(tc, dict) else getattr(tc, 'model_dump', lambda: {})()
+                tc_data = tc if isinstance(tc, dict) else getattr(tc, "model_dump", lambda: {})()
                 self.tool_name = tc_data.get("name", "unknown")
                 self.tool_args = tc_data.get("args", {})
                 return
@@ -130,7 +137,7 @@ class ApprovalModal(ModalScreen):
             # Path 3: Check for nested "action" key at top level
             if "action" in value:
                 action = value["action"]
-                action_data = action if isinstance(action, dict) else getattr(action, 'model_dump', lambda: {})()
+                action_data = action if isinstance(action, dict) else getattr(action, "model_dump", lambda: {})()
                 self.tool_name = action_data.get("name", "unknown")
                 self.tool_args = action_data.get("args", {})
                 return
@@ -140,43 +147,49 @@ class ApprovalModal(ModalScreen):
                 messages = value["messages"]
                 if messages:
                     msg = messages[0]
-                    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                    if hasattr(msg, "tool_calls") and msg.tool_calls:
                         tc = msg.tool_calls[0]
                         self.tool_name = tc.get("name", "unknown")
                         self.tool_args = tc.get("args", {})
+                        return
+
+            # Path 5: Check if value has name directly (for Interrupt objects)
+            if isinstance(value, dict) and "name" in value:
+                self.tool_name = value.get("name", "unknown")
+                self.tool_args = value.get("args", {})
+                return
+
+            # Path 6: Check for __interrupt__ structure
+            if "__interrupt__" in value:
+                interrupt = value["__interrupt__"]
+                if isinstance(interrupt, list) and len(interrupt) > 0:
+                    item = interrupt[0]
+                    if hasattr(item, "value"):
+                        item = item.value
+                    if isinstance(item, dict):
+                        self.tool_name = item.get("name", "unknown")
+                        self.tool_args = item.get("args", {})
                         return
 
         except Exception as e:
             self.tool_name = "error"
             self.tool_args = {"error": str(e), "debug": str(self.interrupt_data)[:200]}
 
+        # Store raw data for debugging
+        self._debug_data = str(self.interrupt_data)[:500]
+
     def _setup_options(self) -> None:
         """Setup options for the modal."""
         self.options = [
-            {
-                "key": "1",
-                "label": "Approve",
-                "description": "✓ Allow this once",
-                "action": "approve"
-            },
+            {"key": "1", "label": "Approve", "description": "✓ Allow this once", "action": "approve"},
             {
                 "key": "2",
                 "label": "Approve All for Tool",
                 "description": "✓ Always approve this tool",
-                "action": "approve_all"
+                "action": "approve_all",
             },
-            {
-                "key": "3",
-                "label": "Reject",
-                "description": "❌ Block execution",
-                "action": "reject"
-            },
-            {
-                "key": "4",
-                "label": "Cancel",
-                "description": "🚫 Dismiss dialog",
-                "action": "cancel"
-            }
+            {"key": "3", "label": "Reject", "description": "❌ Block execution", "action": "reject"},
+            {"key": "4", "label": "Cancel", "description": "🚫 Dismiss dialog", "action": "cancel"},
         ]
 
     def compose(self) -> ComposeResult:
@@ -185,7 +198,12 @@ class ApprovalModal(ModalScreen):
             yield Static("⚠️ Action Requires Approval", id="dialog-title")
 
             with Static(id="tool-info"):
-                yield Static(f"Tool: {self.tool_name}", id="tool-name")
+                tool_display = f"Tool: {self.tool_name}"
+                if self.tool_name == "unknown":
+                    debug_data = getattr(self, "_debug_data", "N/A")
+                    debug_data = debug_data.replace("[", "\\[").replace("]", "\\]")
+                    tool_display += f"\nDebug: {debug_data}"
+                yield Static(tool_display, id="tool-name")
                 yield Static(self._format_args(self.tool_args))
 
             with Vertical(id="options-list"):
@@ -195,7 +213,7 @@ class ApprovalModal(ModalScreen):
                         key=option["key"],
                         label=option["label"],
                         description=option["description"],
-                        selected=(i == self.selected_index)
+                        selected=(i == self.selected_index),
                     )
 
     def _format_args(self, args: dict) -> str:
@@ -264,20 +282,13 @@ class ApprovalModal(ModalScreen):
 
     def _approve_all(self) -> None:
         """Approve and add tool to auto-approve list."""
-        decision = {
-            "type": "approve",
-            "add_to_auto_approve": True,
-            "tool_name": self.tool_name
-        }
+        decision = {"type": "approve", "add_to_auto_approve": True, "tool_name": self.tool_name}
         self.callback(decision)
         self.dismiss()
 
     def _reject(self) -> None:
         """Reject the action."""
-        decision = {
-            "type": "reject",
-            "message": "Action rejected by user"
-        }
+        decision = {"type": "reject", "message": "Action rejected by user"}
         self.callback(decision)
         self.dismiss()
 

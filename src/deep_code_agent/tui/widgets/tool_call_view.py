@@ -20,15 +20,17 @@ class ToolCallView(Vertical):
     DEFAULT_CSS = """
     ToolCallView {
         width: 100%;
+        height: auto;
         margin: 1 0;
         padding: 1;
-        background: $surface-darken-2;
-        border: solid $primary-darken-1;
+        background: #1a1a2e;
+        border: solid $primary;
+        display: block;
     }
 
     ToolCallView .tool-header {
         text-style: bold;
-        color: $primary;
+        color: #00d4ff;
         margin-bottom: 1;
     }
 
@@ -49,32 +51,34 @@ class ToolCallView(Vertical):
     }
 
     ToolCallView .tool-args {
-        background: $surface-darken-3;
+        background: #16213e;
         padding: 1;
         margin-top: 1;
-        border: solid $surface-darken-1;
+        border: solid #0f3460;
+        height: auto;
     }
 
     ToolCallView .arg-line {
         margin: 0;
-        color: $text-muted;
+        color: #e94560;
     }
 
     ToolCallView .tool-result {
         margin-top: 1;
-        background: $surface-darken-3;
+        background: #16213e;
         padding: 1;
-        border: solid $surface-darken-1;
+        border: solid #0f3460;
+        height: auto;
     }
 
     ToolCallView .result-label {
         text-style: bold;
-        color: $text-muted;
+        color: #eaeaea;
         margin-bottom: 1;
     }
 
     ToolCallView .result-content {
-        color: $text;
+        color: #ffffff;
     }
     """
 
@@ -99,7 +103,9 @@ class ToolCallView(Vertical):
         """Compose the tool call view."""
         # Header with tool name and status
         status_class = f"status-{self.status}"
-        header_text = f"🔧 {self.tool_name}"
+        # Use a fallback name if tool_name is unknown or empty
+        display_name = self.tool_name if self.tool_name and self.tool_name not in ("unknown", "", "None") else "tool"
+        header_text = f"🔧 {display_name}"
         header = Static(
             f"{header_text} [{self.status.upper()}]",
             classes=f"tool-header {status_class}"
@@ -120,8 +126,8 @@ class ToolCallView(Vertical):
                     arg_line = f"  {key}: {value_str}"
                     yield Static(arg_line, classes="arg-line")
 
-        # Result (shown if result exists)
-        if self.result:
+        # Result (shown if result exists and is not empty)
+        if self.result and str(self.result).strip():
             result_container = Vertical(classes="tool-result")
             self._result_container = result_container
             with result_container:
@@ -138,7 +144,9 @@ class ToolCallView(Vertical):
         # Update the header display
         try:
             header = self.query_one(".tool-header", Static)
-            header_text = f"🔧 {self.tool_name}"
+            # Use a fallback name if tool_name is unknown or empty
+            display_name = self.tool_name if self.tool_name and self.tool_name not in ("unknown", "", "None") else "tool"
+            header_text = f"🔧 {display_name}"
             header.update(f"{header_text} [{status.upper()}]")
 
             # Update status class
@@ -147,6 +155,34 @@ class ToolCallView(Vertical):
             header.add_class(f"status-{status}")
         except Exception:
             pass
+
+    def update_args(self, args: dict) -> None:
+        if args is None:
+            return
+        if not isinstance(args, dict):
+            args = {"value": args}
+        if not args:
+            return
+        self.args = args
+
+        if self._args_container:
+            self._args_container.remove()
+
+        args_container = Vertical(classes="tool-args")
+        self._args_container = args_container
+
+        try:
+            self.mount(args_container, after=self._header_static)
+        except Exception:
+            self.mount(args_container)
+
+        args_container.mount(Static("Arguments:", classes="result-label"))
+        for key, value in args.items():
+            value_str = str(value)
+            if len(value_str) > 100:
+                value_str = value_str[:100] + "..."
+            arg_line = f"  {key}: {value_str}"
+            args_container.mount(Static(arg_line, classes="arg-line"))
 
     def update_result(self, result: str, status: str = "success") -> None:
         """Update the tool call result and status.
