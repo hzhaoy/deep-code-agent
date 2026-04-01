@@ -21,9 +21,13 @@ deep-code-agent = "deep_code_agent.cli:main"
 requires = ["uv_build>=0.9.14,<0.10.0"]
 build-backend = "uv_build"
 
+[tool.pytest.ini_options]
+addopts = "--cov=src/deep_code_agent --cov-report=term-missing --cov-fail-under=40"
+
 [dependency-groups]
 dev = [
     "ipython>=9.8.0",
     "langgraph-cli[inmem]>=0.4.9",
     "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
 ]
