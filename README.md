@@ -135,6 +135,9 @@ agent = create_code_agent(
 ```bash
 # Run the agent (approvals enabled by default)
 python -m deep_code_agent
+
+# Show the installed CLI version
+python -m deep_code_agent --version
 ```
 
 When using the CLI, you'll be prompted for approval when the agent attempts to modify files or execute commands:
