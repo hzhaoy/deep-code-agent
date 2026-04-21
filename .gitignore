@@ -71,3 +71,4 @@ build/
 .claude/settings.local.json
 .claude/memory/
 .claude/scheduled_tasks.json
+.omx/

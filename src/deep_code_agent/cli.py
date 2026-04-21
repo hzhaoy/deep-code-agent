@@ -3,6 +3,8 @@
 import argparse
 from typing import TYPE_CHECKING, Any
 
+from deep_code_agent import __version__
+
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
 
@@ -184,6 +186,7 @@ def _handle_interrupt(agent, interrupt_data, config: "RunnableConfig") -> dict[s
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="deep-code-agent", description="Deep Code Agent CLI")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--backend-type", choices=["state", "filesystem"], default="state", help="Backend type")
     parser.add_argument("--model-name", default=None, help="Model name")
     parser.add_argument("--model-provider", default="openai", help="Model provider")
