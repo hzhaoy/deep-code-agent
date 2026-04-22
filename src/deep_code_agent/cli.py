@@ -38,7 +38,7 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
     load_dotenv()
 
     model = None
-    if any([args.model_name, args.api_key, args.base_url]) or args.model_provider:
+    if any([args.model_name, args.api_key, args.base_url]) or args.model_provider != "openai":
         model = create_chat_model(
             model_name=args.model_name,
             model_provider=args.model_provider,
