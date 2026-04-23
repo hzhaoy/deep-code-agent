@@ -272,7 +272,7 @@ class ApprovalModal(ModalScreen):
 
     def action_cancel(self) -> None:
         """Cancel the modal."""
-        self.dismiss()
+        self._cancel()
 
     def _approve(self) -> None:
         """Approve the action."""
@@ -294,4 +294,6 @@ class ApprovalModal(ModalScreen):
 
     def _cancel(self) -> None:
         """Cancel the modal."""
+        decision = {"type": "reject", "message": "Action cancelled by user"}
+        self.callback(decision)
         self.dismiss()
