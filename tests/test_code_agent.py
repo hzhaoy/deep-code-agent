@@ -163,6 +163,7 @@ class TestCreateCodeAgentInterruptOn:
         assert backend is mock_state_backend.return_value
 
     @patch("deepagents.backends.filesystem.FilesystemBackend")
+    @patch("deep_code_agent.code_agent.make_terminal_tool")
     @patch("deep_code_agent.code_agent.create_deep_agent")
     @patch("deep_code_agent.code_agent.create_chat_model")
     @patch("deep_code_agent.code_agent.get_system_prompt")
@@ -173,6 +174,7 @@ class TestCreateCodeAgentInterruptOn:
         mock_prompt,
         mock_create_chat_model,
         mock_create_agent,
+        mock_make_terminal_tool,
         mock_filesystem_backend,
         tmp_path,
     ):
@@ -181,6 +183,8 @@ class TestCreateCodeAgentInterruptOn:
         mock_subagents.return_value = []
         mock_create_chat_model.return_value = MagicMock()
         mock_create_agent.return_value = MagicMock()
+        mock_terminal_tool = MagicMock(name="filesystem_terminal_tool")
+        mock_make_terminal_tool.return_value = mock_terminal_tool
         target_dir = tmp_path / "workspace"
 
         create_code_agent(str(target_dir), backend_type="filesystem")
@@ -188,8 +192,10 @@ class TestCreateCodeAgentInterruptOn:
         assert target_dir.exists()
         call_kwargs = mock_create_agent.call_args.kwargs
         mock_filesystem_backend.assert_called_once_with(root_dir=target_dir.absolute().as_posix())
+        mock_make_terminal_tool.assert_called_once_with(target_dir.absolute().as_posix())
         assert call_kwargs["backend"] is mock_filesystem_backend.return_value
-        assert call_kwargs["tools"] == [terminal]
+        assert call_kwargs["tools"] == [mock_terminal_tool]
+        assert call_kwargs["tools"][0] is not terminal
 
     @patch("deep_code_agent.code_agent.create_deep_agent")
     @patch("deep_code_agent.code_agent.create_chat_model")
