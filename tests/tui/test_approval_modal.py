@@ -90,3 +90,35 @@ def test_approval_modal_down_navigation():
             assert modal.selected_index == 3
 
     asyncio.run(run_test())
+
+
+def test_approval_modal_cancel_emits_rejection_decision():
+    """Cancel should resolve the interrupt instead of leaving it hanging."""
+    import asyncio
+    from deep_code_agent.tui.screens.approval_modal import ApprovalModal
+
+    async def run_test():
+        app = App()
+        async with app.run_test() as pilot:
+            interrupt_data = {
+                "action_requests": [
+                    {"action": {"name": "read_file", "args": {}}}
+                ]
+            }
+
+            results = {}
+
+            def callback(decision):
+                results["decision"] = decision
+
+            modal = ApprovalModal(interrupt_data, callback=callback)
+            await app.push_screen(modal)
+
+            modal.action_cancel()
+
+            assert results["decision"] == {
+                "type": "reject",
+                "message": "Action cancelled by user",
+            }
+
+    asyncio.run(run_test())
