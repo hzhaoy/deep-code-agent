@@ -9,7 +9,6 @@ This module provides a comprehensive code agent with specialized subagents for:
 - Code refactoring and optimization
 """
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +18,7 @@ from langchain_core.language_models import BaseChatModel
 from deep_code_agent.config import DEFAULT_INTERRUPT_ON
 from deep_code_agent.models.llms.langchain_chat import create_chat_model
 from deep_code_agent.prompts import create_subagent_configurations, get_system_prompt
-from deep_code_agent.tools import terminal
+from deep_code_agent.tools import make_terminal_tool
 
 
 def create_code_agent(
@@ -66,8 +65,7 @@ def create_code_agent(
         from deepagents.backends.filesystem import FilesystemBackend
 
         backend = FilesystemBackend(root_dir=codebase_dir)
-        tools = [terminal]
-        os.environ["DEEP_CODE_AGENT_TERMINAL_CWD"] = codebase_dir
+        tools = [make_terminal_tool(codebase_dir)]
     elif backend_type == "state":
         from deepagents.backends.state import StateBackend
 
@@ -75,7 +73,6 @@ def create_code_agent(
             return StateBackend(rt)
 
         tools = []
-        os.environ.pop("DEEP_CODE_AGENT_TERMINAL_CWD", None)
     else:
         raise ValueError(f"Unsupported backend_type: {backend_type}")
 
