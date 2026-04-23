@@ -4,7 +4,7 @@ import subprocess
 from unittest.mock import MagicMock, patch
 
 from deep_code_agent.config import MAX_TIMEOUT
-from deep_code_agent.tools import terminal
+from deep_code_agent.tools import make_terminal_tool, terminal
 
 
 class TestTerminalTool:
@@ -42,14 +42,29 @@ class TestTerminalTool:
         assert "non-zero exit code indicates potential error" in result
         mock_run.assert_called_once()
 
-    @patch.dict("deep_code_agent.tools.terminal.os.environ", {"DEEP_CODE_AGENT_TERMINAL_CWD": "/tmp/agent-root"})
     @patch("deep_code_agent.tools.terminal.subprocess.run")
-    def test_uses_agent_scoped_workdir_when_configured(self, mock_run):
+    def test_make_terminal_tool_binds_configured_workdir(self, mock_run):
         mock_run.return_value = MagicMock(stdout="ok\n", stderr="", returncode=0)
 
-        terminal.invoke({"command": "pwd"})
+        bound_terminal = make_terminal_tool("/tmp/agent-root")
+
+        bound_terminal.invoke({"command": "pwd"})
 
         assert mock_run.call_args.kwargs["cwd"] == "/tmp/agent-root"
+
+    @patch("deep_code_agent.tools.terminal.subprocess.run")
+    def test_terminal_tool_instances_keep_distinct_workdirs(self, mock_run):
+        mock_run.return_value = MagicMock(stdout="ok\n", stderr="", returncode=0)
+
+        first_tool = make_terminal_tool("/tmp/first-root")
+        second_tool = make_terminal_tool("/tmp/second-root")
+
+        first_tool.invoke({"command": "pwd"})
+        second_tool.invoke({"command": "pwd"})
+
+        first_call, second_call = mock_run.call_args_list
+        assert first_call.kwargs["cwd"] == "/tmp/first-root"
+        assert second_call.kwargs["cwd"] == "/tmp/second-root"
 
     @patch("deep_code_agent.tools.terminal.subprocess.run")
     def test_timeout_expired_is_reported(self, mock_run):
