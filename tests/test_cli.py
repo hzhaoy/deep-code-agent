@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from deep_code_agent import __version__
-from deep_code_agent.cli import _initialize_agent, main
+from deep_code_agent.cli import _initialize_agent, _run_tui_mode, main
 
 
 def test_main_prints_version_and_exits(capsys):
@@ -79,3 +79,21 @@ def test_initialize_agent_builds_model_for_explicit_provider(
     assert mock_create_code_agent.call_args.kwargs["model"] is mock_create_chat_model.return_value
     assert mock_create_code_agent.call_args.kwargs["backend_type"] == "filesystem"
     assert mock_create_code_agent.call_args.kwargs["checkpointer"] is mock_checkpointer.return_value
+
+
+@patch("deep_code_agent.tui.DeepCodeAgentApp")
+@patch("deep_code_agent.cli._initialize_agent")
+def test_tui_mode_defers_agent_initialization_until_after_app_starts(mock_initialize_agent, mock_app_class):
+    """TUI mode should render before doing slow agent initialization."""
+    args = SimpleNamespace(
+        model_name=None,
+        thread_id="test-thread",
+    )
+    app_instance = mock_app_class.return_value
+
+    _run_tui_mode(args)
+
+    mock_initialize_agent.assert_not_called()
+    mock_app_class.assert_called_once()
+    assert "agent_factory" in mock_app_class.call_args.kwargs
+    app_instance.run.assert_called_once_with()
