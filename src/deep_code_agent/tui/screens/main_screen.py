@@ -64,7 +64,11 @@ class MainScreen(Screen):
         except Exception:
             pass
         chat_log = self.query_one("#chat_log", ChatLog)
-        chat_log.add_system_message("🧠 Deep Code Agent ready! Type your request below.")
+        is_agent_ready = bool(getattr(self.app, "is_agent_ready", True))
+        if is_agent_ready:
+            chat_log.add_system_message("Deep Code Agent ready! Type your request below.")
+        else:
+            chat_log.add_system_message("Initializing agent...")
 
     def action_toggle_dark(self) -> None:
         """Toggle dark mode."""

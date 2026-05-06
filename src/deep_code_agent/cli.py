@@ -275,9 +275,10 @@ def _run_tui_mode(args) -> None:
     print(f"🚀 Starting Deep Code Agent TUI...")
     print(f"📁 Codebase: {codebase_dir}")
 
-    try:
-        agent = _initialize_agent(args, codebase_dir)
+    def agent_factory():
+        return _initialize_agent(args, codebase_dir)
 
+    try:
         session_info = {
             "model": args.model_name or "default",
             "session_id": args.thread_id,
@@ -285,7 +286,7 @@ def _run_tui_mode(args) -> None:
         }
 
         app = DeepCodeAgentApp(
-            agent=agent,
+            agent_factory=agent_factory,
             config={"configurable": {"thread_id": args.thread_id}},
             session_info=session_info,
         )
