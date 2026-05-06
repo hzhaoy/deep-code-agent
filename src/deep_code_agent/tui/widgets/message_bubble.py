@@ -76,5 +76,11 @@ class MessageBubble(Vertical):
     def update_content(self, new_content: str) -> None:
         """Update the bubble content (useful for streaming)."""
         self.content = new_content
-        content_widget = self.query_one(".message-text", Static)
+        try:
+            content_widget = self.query_one(".message-text", Static)
+        except Exception:
+            # The bubble may have been mounted but not composed yet when
+            # streamed chunks complete in the same event-loop turn. Storing
+            # content is enough; compose() will render the latest value.
+            return
         content_widget.update(new_content)

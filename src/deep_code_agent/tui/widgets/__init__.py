@@ -6,6 +6,7 @@ from deep_code_agent.tui.widgets.message_bubble import MessageBubble
 from deep_code_agent.tui.widgets.selectable_option import SelectableOption
 from deep_code_agent.tui.widgets.side_panel import SidePanel
 from deep_code_agent.tui.widgets.status_bar import StatusBar
+from deep_code_agent.tui.widgets.todos_progress_card import TodosProgressCard
 from deep_code_agent.tui.widgets.tool_call_view import ToolCallView
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "SelectableOption",
     "SidePanel",
     "StatusBar",
+    "TodosProgressCard",
     "ToolCallView",
 ]

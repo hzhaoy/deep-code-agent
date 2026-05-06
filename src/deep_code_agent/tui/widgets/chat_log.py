@@ -4,6 +4,7 @@ from textual.containers import VerticalScroll
 from textual.reactive import reactive
 
 from deep_code_agent.tui.widgets.message_bubble import MessageBubble
+from deep_code_agent.tui.widgets.todos_progress_card import TodosProgressCard
 
 
 class ChatLog(VerticalScroll):
@@ -35,10 +36,21 @@ class ChatLog(VerticalScroll):
     # Reactive state for tracking if auto-scroll is enabled
     auto_scroll = reactive(True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._todos_card: TodosProgressCard | None = None
+
     def compose(self):
         """Compose the chat log (empty initially)."""
         # Messages will be added dynamically
         return []
+
+    def _mount_above_todos_card(self, widget) -> None:
+        """Mount chat content above the pinned todos card when it exists."""
+        if self._todos_card is not None and self._todos_card in self.children:
+            self.mount(widget, before=self._todos_card)
+            return
+        self.mount(widget)
 
     def add_user_message(self, content: str) -> MessageBubble:
         """Add a user message to the chat log.
@@ -50,7 +62,7 @@ class ChatLog(VerticalScroll):
             The created MessageBubble widget
         """
         bubble = MessageBubble(content, role="user")
-        self.mount(bubble)
+        self._mount_above_todos_card(bubble)
         self._scroll_to_bottom()
         return bubble
 
@@ -64,7 +76,7 @@ class ChatLog(VerticalScroll):
             The created MessageBubble widget
         """
         bubble = MessageBubble(content, role="agent")
-        self.mount(bubble)
+        self._mount_above_todos_card(bubble)
         self._scroll_to_bottom()
         return bubble
 
@@ -78,7 +90,7 @@ class ChatLog(VerticalScroll):
             The created MessageBubble widget
         """
         bubble = MessageBubble(content, role="system")
-        self.mount(bubble)
+        self._mount_above_todos_card(bubble)
         self._scroll_to_bottom()
         return bubble
 
@@ -92,7 +104,7 @@ class ChatLog(VerticalScroll):
         # Format the tool call nicely
         content = f"🔧 Tool call: {tool_name}"
         bubble = MessageBubble(content, role="system")
-        self.mount(bubble)
+        self._mount_above_todos_card(bubble)
         self._scroll_to_bottom()
 
     def add_tool_call_widget(
@@ -121,15 +133,49 @@ class ChatLog(VerticalScroll):
             status=status,
             result=result
         )
-        self.mount(widget)
+        self._mount_above_todos_card(widget)
         self._scroll_to_bottom()
         return widget
+
+    def upsert_todos_card(self, todos: list[dict[str, str]]) -> TodosProgressCard:
+        """Create or update the singleton todos progress card.
+
+        The card is moved to the bottom on every update so the latest task
+        status stays visible in the chat stream.
+        """
+        if self._todos_card is None:
+            self._todos_card = TodosProgressCard(todos)
+            self.mount(self._todos_card)
+            self._scroll_to_bottom()
+            return self._todos_card
+
+        expanded = self._todos_card.expanded
+        self._todos_card.update_todos(todos)
+        self._todos_card.expanded = expanded
+
+        if self.children and self.children[-1] is not self._todos_card:
+            try:
+                self.move_child(self._todos_card, after=len(self.children) - 1)
+            except Exception:
+                # Textual versions vary in move/remount behavior. If moving an
+                # existing widget fails, recreate the card while preserving the
+                # user's expanded/collapsed preference.
+                try:
+                    self._todos_card.remove()
+                except Exception:
+                    pass
+                self._todos_card = TodosProgressCard(todos, expanded=expanded)
+                self.mount(self._todos_card)
+
+        self._scroll_to_bottom()
+        return self._todos_card
 
     def clear_messages(self) -> None:
         """Clear all messages from the chat log."""
         # Remove all children (MessageBubble widgets)
         for child in list(self.children):
             child.remove()
+        self._todos_card = None
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the chat log."""

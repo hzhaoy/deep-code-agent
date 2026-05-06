@@ -17,6 +17,7 @@ class EventType(Enum):
     TOOL_SUCCESS = auto()  # Tool execution succeeded
     TOOL_ERROR = auto()  # Tool execution failed
     TOOL_RESULT = auto()  # Tool execution result (legacy)
+    TODOS_UPDATE = auto()  # Agent todo list was created or updated
     HITL_INTERRUPT = auto()  # Human-in-the-loop approval needed
     ERROR = auto()  # Error occurred
     DONE = auto()  # Stream complete
@@ -49,6 +50,8 @@ class StreamHandler:
             handle_event(event)
     """
 
+    TODO_STATUSES = {"pending", "in_progress", "completed", "failed"}
+
     def __init__(self, agent, config: dict):
         """Initialize stream handler.
 
@@ -61,6 +64,79 @@ class StreamHandler:
         self._message_chunks: list[str] = []
         self._interrupted = False
         self._seen_tool_call_ids: set[str] = set()
+
+    def _normalize_todo_item(self, item: Any) -> dict[str, str] | None:
+        """Normalize one todo item from dict/object forms.
+
+        LangChain's TodoListMiddleware currently emits todo objects with
+        ``content`` and ``status`` fields. Keep the UI tolerant of dict,
+        pydantic-like, and light object forms so stream chunk shape changes do
+        not break the TUI.
+        """
+        if hasattr(item, "model_dump"):
+            try:
+                item = item.model_dump()
+            except Exception:
+                pass
+
+        if isinstance(item, dict):
+            content = item.get("content")
+            status = item.get("status")
+        else:
+            content = getattr(item, "content", None)
+            status = getattr(item, "status", None)
+
+        if content is None or status is None:
+            return None
+
+        content_text = str(content).strip()
+        status_text = str(status).strip()
+        if not content_text or status_text not in self.TODO_STATUSES:
+            return None
+
+        return {"content": content_text, "status": status_text}
+
+    def _normalize_todos(self, todos: Any) -> list[dict[str, str]]:
+        """Normalize a todo list payload, skipping malformed entries."""
+        if not isinstance(todos, list):
+            return []
+
+        normalized: list[dict[str, str]] = []
+        for item in todos:
+            todo = self._normalize_todo_item(item)
+            if todo is not None:
+                normalized.append(todo)
+        return normalized
+
+    def _find_todos_payload(self, chunk: Any, *, max_depth: int = 4) -> list[dict[str, str]]:
+        """Find and normalize the first valid ``todos`` payload in an update chunk."""
+        if max_depth < 0:
+            return []
+
+        if hasattr(chunk, "model_dump"):
+            try:
+                chunk = chunk.model_dump()
+            except Exception:
+                pass
+
+        if isinstance(chunk, dict):
+            if "todos" in chunk:
+                todos = self._normalize_todos(chunk.get("todos"))
+                if todos:
+                    return todos
+
+            for value in chunk.values():
+                todos = self._find_todos_payload(value, max_depth=max_depth - 1)
+                if todos:
+                    return todos
+
+        elif isinstance(chunk, list):
+            for item in chunk:
+                todos = self._find_todos_payload(item, max_depth=max_depth - 1)
+                if todos:
+                    return todos
+
+        return []
 
     async def _process_stream(self, stream, include_tool_calls: bool = True) -> AsyncIterator[AgentEvent]:
         """Process the agent stream and yield events.
@@ -181,6 +257,10 @@ class StreamHandler:
                     interrupt_data = chunk["__interrupt__"]
                     yield AgentEvent(type=EventType.HITL_INTERRUPT, data=interrupt_data)
                     return
+
+                todos = self._find_todos_payload(chunk)
+                if todos:
+                    yield AgentEvent(type=EventType.TODOS_UPDATE, data=todos)
 
     async def process(self, state: dict) -> AsyncIterator[AgentEvent]:
         """Process a user request and yield events.
