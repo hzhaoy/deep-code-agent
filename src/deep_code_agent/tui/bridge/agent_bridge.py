@@ -483,6 +483,11 @@ class AgentBridge:
                     if widget is self._active_tool_widget:
                         self._active_tool_widget = None
 
+                elif event.type == EventType.TODOS_UPDATE:
+                    todos = event.data if isinstance(event.data, list) else []
+                    if hasattr(chat_log, "upsert_todos_card"):
+                        chat_log.upsert_todos_card(todos)
+
                 elif event.type == EventType.HITL_INTERRUPT:
                     status_bar.set_waiting_approval()
                     interrupt_data = event.data
