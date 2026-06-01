@@ -1,6 +1,7 @@
 """Command-line interface for Deep Code Agent."""
 
 import argparse
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from deep_code_agent import __version__
@@ -20,6 +21,18 @@ def _format_args(args: dict[str, Any], max_length: int = 200) -> str:
     return "\n".join(formatted)
 
 
+def _resolve_skills(args, codebase_dir: str) -> list[str] | None:
+    """Resolve skill directories from CLI args or the project default."""
+    if args.skills_dir:
+        return [Path(skill_dir).expanduser().absolute().as_posix() for skill_dir in args.skills_dir]
+
+    default_skills = Path(codebase_dir) / ".agents" / "skills"
+    if default_skills.exists():
+        return [default_skills.absolute().as_posix()]
+
+    return None
+
+
 def _initialize_agent(args, codebase_dir: str) -> Any:
     """Initialize model and agent for both CLI and TUI modes.
 
@@ -36,6 +49,7 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
     from deep_code_agent.models.llms.langchain_chat import create_chat_model
 
     load_dotenv()
+    skills = _resolve_skills(args, codebase_dir)
 
     model = None
     if any([args.model_name, args.api_key, args.base_url]) or args.model_provider != "openai":
@@ -51,6 +65,7 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
         model=model,
         checkpointer=InMemorySaver(),
         backend_type=args.backend_type,
+        skills=skills,
     )
 
 
@@ -194,6 +209,12 @@ def main() -> None:
     parser.add_argument("--base-url", default=None, help="Base URL for model service")
     parser.add_argument("--thread-id", default="1", help="Thread ID for session")
     parser.add_argument("--tui", action="store_true", help="Use TUI mode (experimental)")
+    parser.add_argument(
+        "--skills-dir",
+        action="append",
+        default=None,
+        help="Skill directory source. Can be provided multiple times. Defaults to <codebase_dir>/.agents/skills if it exists.",
+    )
 
     args = parser.parse_args()
 
@@ -283,6 +304,7 @@ def _run_tui_mode(args) -> None:
             "model": args.model_name or "default",
             "session_id": args.thread_id,
             "codebase_dir": codebase_dir,
+            "skills": _resolve_skills(args, codebase_dir) or [],
         }
 
         app = DeepCodeAgentApp(

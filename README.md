@@ -162,6 +162,44 @@ Options:
 Your choice:
 ```
 
+### Skills
+
+Deep Code Agent can load DeepAgents-native skills from a local skills directory when using the filesystem backend.
+By default, it looks for project skills at:
+
+```plaintext
+<codebase_dir>/.agents/skills
+```
+
+Each skill is a directory with a `SKILL.md` file:
+
+```plaintext
+.agents/skills/
+└── my-skill/
+    └── SKILL.md
+```
+
+`SKILL.md` must include YAML frontmatter with a skill name and description:
+
+```markdown
+---
+name: my-skill
+description: Specialized workflow for a project task
+---
+
+# My Skill
+
+Use these instructions when the task matches this workflow.
+```
+
+To load explicit skill directories, pass `--skills-dir`. This option can be provided multiple times, and explicit directories replace the default auto-discovery path:
+
+```bash
+uv run deep-code-agent --backend-type filesystem --skills-dir .agents/skills
+```
+
+Skills currently require `--backend-type filesystem`; the state backend does not load local skill directories.
+
 ### Working with Subagents
 
 The Deep Code Agent includes specialized subagents that can be used independently or as part of the main workflow:

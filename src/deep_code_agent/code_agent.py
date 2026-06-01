@@ -27,6 +27,7 @@ def create_code_agent(
     checkpointer: Any = None,
     backend_type: str = "state",
     interrupt_on: dict[str, bool | Any] | None = DEFAULT_INTERRUPT_ON,
+    skills: list[str] | None = None,
 ):
     """
     Create a DeepAgents-based Code Agent for software development tasks.
@@ -44,6 +45,8 @@ def create_code_agent(
         backend_type: Backend type to use. Must be either "state" or "filesystem".
         interrupt_on: Configuration for human-in-the-loop approval. Maps tool names
             to approval settings. Set to None to disable all approvals.
+        skills: Optional list of local skill directory sources. Skills are only
+            supported with the filesystem backend in this project.
 
     Returns:
         A fully configured Code Agent instance ready to handle software development tasks.
@@ -53,6 +56,9 @@ def create_code_agent(
         ValueError: If an unsupported backend type is provided.
     """
     path = Path(codebase_dir)
+    if backend_type == "state" and skills:
+        raise ValueError("Skills require filesystem backend; use backend_type='filesystem'.")
+
     if backend_type == "filesystem" and not path.exists():
         path.mkdir(parents=True, exist_ok=True)
 
@@ -64,7 +70,7 @@ def create_code_agent(
     if backend_type == "filesystem":
         from deepagents.backends.filesystem import FilesystemBackend
 
-        backend = FilesystemBackend(root_dir=codebase_dir)
+        backend = FilesystemBackend(root_dir=codebase_dir, virtual_mode=False)
         tools = [make_terminal_tool(codebase_dir)]
     elif backend_type == "state":
         from deepagents.backends.state import StateBackend
@@ -85,6 +91,7 @@ def create_code_agent(
             checkpointer=checkpointer,
             backend=backend,
             interrupt_on=interrupt_on,
+            skills=skills,
         )
     except Exception as exc:
         raise RuntimeError(f"Error creating DeepAgent: {exc}") from exc
