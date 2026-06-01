@@ -55,6 +55,11 @@ class AgentBridge:
         self._pending_tool_widgets.clear()
         self._tool_widgets_by_id.clear()
 
+    def _finish_streaming_message_segment(self) -> None:
+        """Detach the current assistant bubble so later chunks start a new one."""
+        self._streaming_chunks.clear()
+        self._streaming_bubble = None
+
     def _extract_tool_name_from_interrupt(self, interrupt_data: dict) -> str:
         """Extract tool name from interrupt data.
 
@@ -346,6 +351,7 @@ class AgentBridge:
                     input_box.focus_input()
 
                 elif event.type == EventType.TOOL_CALL:
+                    self._finish_streaming_message_segment()
                     tool_data = event.data or {}
                     tool_name = (
                         tool_data.get("name", "unknown")
@@ -414,6 +420,7 @@ class AgentBridge:
                         self._active_tool_widget.update_status("running")
 
                 elif event.type == EventType.TOOL_SUCCESS:
+                    self._finish_streaming_message_segment()
                     result = event.data or ""
                     meta = event.metadata or {}
                     tool_call_id = meta.get("tool_call_id") if isinstance(meta, dict) else None
@@ -449,6 +456,7 @@ class AgentBridge:
                         self._active_tool_widget = None
 
                 elif event.type == EventType.TOOL_ERROR:
+                    self._finish_streaming_message_segment()
                     error = event.data or "Unknown error"
                     meta = event.metadata or {}
                     tool_call_id = meta.get("tool_call_id") if isinstance(meta, dict) else None

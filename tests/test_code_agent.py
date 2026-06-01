@@ -191,11 +191,46 @@ class TestCreateCodeAgentInterruptOn:
 
         assert target_dir.exists()
         call_kwargs = mock_create_agent.call_args.kwargs
-        mock_filesystem_backend.assert_called_once_with(root_dir=target_dir.absolute().as_posix())
+        mock_filesystem_backend.assert_called_once_with(root_dir=target_dir.absolute().as_posix(), virtual_mode=False)
         mock_make_terminal_tool.assert_called_once_with(target_dir.absolute().as_posix())
         assert call_kwargs["backend"] is mock_filesystem_backend.return_value
         assert call_kwargs["tools"] == [mock_terminal_tool]
         assert call_kwargs["tools"][0] is not terminal
+        assert call_kwargs["skills"] is None
+
+    @patch("deepagents.backends.filesystem.FilesystemBackend")
+    @patch("deep_code_agent.code_agent.make_terminal_tool")
+    @patch("deep_code_agent.code_agent.create_deep_agent")
+    @patch("deep_code_agent.code_agent.create_chat_model")
+    @patch("deep_code_agent.code_agent.get_system_prompt")
+    @patch("deep_code_agent.code_agent.create_subagent_configurations")
+    def test_filesystem_backend_passes_skills(
+        self,
+        mock_subagents,
+        mock_prompt,
+        mock_create_chat_model,
+        mock_create_agent,
+        mock_make_terminal_tool,
+        mock_filesystem_backend,
+        tmp_path,
+    ):
+        """Test filesystem backend passes skill directories to DeepAgents."""
+        mock_prompt.return_value = "Root: {codebase_dir}"
+        mock_subagents.return_value = []
+        mock_create_chat_model.return_value = MagicMock()
+        mock_create_agent.return_value = MagicMock()
+        mock_make_terminal_tool.return_value = MagicMock()
+        skills = [tmp_path.joinpath(".agents", "skills").as_posix()]
+
+        create_code_agent(str(tmp_path), backend_type="filesystem", skills=skills)
+
+        call_kwargs = mock_create_agent.call_args.kwargs
+        assert call_kwargs["skills"] == skills
+
+    def test_state_backend_rejects_skills(self):
+        """State backend should not accept local skill directories."""
+        with pytest.raises(ValueError, match="Skills require filesystem backend"):
+            create_code_agent("/tmp/test", backend_type="state", skills=["/tmp/test/.agents/skills"])
 
     @patch("deep_code_agent.code_agent.create_deep_agent")
     @patch("deep_code_agent.code_agent.create_chat_model")

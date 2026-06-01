@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13,<4.0"
 license-files = ["LICENSE"]
 dependencies = [
-    "deepagents>=0.2.8",
+    "deepagents>=0.6.7",
     "langchain>=1.1.0",
     "langchain-openai>=1.1.0",
     "langgraph>=1.0.4",
