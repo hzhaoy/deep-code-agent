@@ -204,8 +204,8 @@ class StreamHandler:
                     return direct_args
                 continue
 
-            fragment = raw_args.strip()
-            if not fragment:
+            fragment = raw_args
+            if fragment == "":
                 continue
             fragment_key = (tool_id, chunk.get("index"), fragment)
             if fragment_key in self._seen_tool_arg_fragment_keys:

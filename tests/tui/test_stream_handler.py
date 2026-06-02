@@ -266,6 +266,36 @@ def test_accumulates_streamed_tool_call_chunk_argument_fragments():
     ]
 
 
+def test_preserves_whitespace_in_streamed_tool_call_chunk_argument_fragments():
+    from deep_code_agent.tui.bridge.stream_handler import EventType, StreamHandler
+
+    token1 = _FakeToken(
+        tool_calls=[{"name": "terminal", "args": {}, "id": "call_terminal", "type": "tool_call"}],
+        tool_call_chunks=[
+            {"name": "terminal", "args": '{"command": "echo', "id": "call_terminal", "index": 0},
+        ],
+        content=None,
+        name=None,
+    )
+    token2 = _FakeToken(
+        tool_calls=[],
+        tool_call_chunks=[
+            {"name": None, "args": ' hello"}', "id": "call_terminal", "index": 0},
+        ],
+        content=None,
+        name=None,
+    )
+    agent = _FakeAgent(events=[("messages", (token1, {})), ("messages", (token2, {}))])
+    handler = StreamHandler(agent, config={})
+
+    events = asyncio.run(_collect(handler.process({"messages": []})))
+    tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
+    assert [e.data for e in tool_call_events] == [
+        {"name": "terminal", "args": {}, "id": "call_terminal"},
+        {"name": "terminal", "args": {"command": "echo hello"}, "id": "call_terminal"},
+    ]
+
+
 def test_dedupes_duplicate_tool_call_chunks_from_content_blocks():
     from deep_code_agent.tui.bridge.stream_handler import EventType, StreamHandler
 
