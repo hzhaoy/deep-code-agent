@@ -20,6 +20,22 @@ def test_agent_bridge_extracts_tool_name_from_action_requests():
     ]
 
 
+def test_agent_bridge_extracts_nested_action_request_wrapper():
+    from deep_code_agent.tui.bridge.agent_bridge import AgentBridge
+
+    bridge = AgentBridge(agent=object())
+    interrupt_data = {
+        "action_requests": [
+            {"action": {"name": "read_file", "args": {"path": "x.txt"}}},
+        ]
+    }
+
+    assert bridge._extract_tool_name_from_interrupt(interrupt_data) == "read_file"
+    assert bridge._extract_action_requests_from_interrupt(interrupt_data) == [
+        {"name": "read_file", "args": {"path": "x.txt"}},
+    ]
+
+
 def test_agent_bridge_extracts_tool_name_from_tool_calls():
     from deep_code_agent.tui.bridge.agent_bridge import AgentBridge
 

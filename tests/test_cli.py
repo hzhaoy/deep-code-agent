@@ -162,3 +162,26 @@ def test_tui_mode_defers_agent_initialization_until_after_app_starts(mock_initia
     mock_app_class.call_args.kwargs["agent_factory"]()
     assert mock_initialize_agent.call_args.args == (args, mock_app_class.call_args.kwargs["session_info"]["codebase_dir"])
     app_instance.run.assert_called_once_with()
+
+
+@patch("dotenv.load_dotenv")
+@patch("deep_code_agent.tui.DeepCodeAgentApp")
+def test_tui_session_info_uses_env_model_and_package_version(mock_app_class, mock_load_dotenv, monkeypatch):
+    """The TUI header should reflect dotenv-backed model metadata before agent init."""
+    monkeypatch.setenv("MODEL_NAME", "gpt-from-env")
+    args = SimpleNamespace(
+        model_name=None,
+        model_provider="openai",
+        api_key=None,
+        base_url=None,
+        backend_type="state",
+        skills_dir=None,
+        thread_id="test-thread",
+    )
+
+    _run_tui_mode(args)
+
+    session_info = mock_app_class.call_args.kwargs["session_info"]
+    assert session_info["model"] == "gpt-from-env"
+    assert session_info["version"] == __version__
+    mock_load_dotenv.assert_called_once()

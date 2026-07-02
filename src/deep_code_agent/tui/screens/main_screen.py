@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.binding import Binding
+from textual.containers import Vertical
 from textual.screen import Screen
-from textual.widgets import Footer, Header
 
+from deep_code_agent.tui.commands import SLASH_COMMANDS, canonical_command_name
 from deep_code_agent.tui.widgets.chat_log import ChatLog
 from deep_code_agent.tui.widgets.input_box import InputBox
-from deep_code_agent.tui.widgets.side_panel import SidePanel
 from deep_code_agent.tui.widgets.status_bar import StatusBar
 
 if TYPE_CHECKING:
@@ -21,8 +22,8 @@ if TYPE_CHECKING:
 class MainScreen(Screen):
     """Main chat interface screen.
 
-    The primary screen displaying the chat log, input box, status bar,
-    and side panel with session information.
+    The primary screen displaying a Codex-style transcript, status row,
+    and bottom input composer.
 
     Example:
         screen = MainScreen()
@@ -30,9 +31,10 @@ class MainScreen(Screen):
     """
 
     BINDINGS = [
-        ("ctrl+d", "toggle_dark", "Toggle Dark Mode"),
-        ("f1", "help", "Help"),
-        ("ctrl+q", "quit", "Quit"),
+        Binding("ctrl+l", "clear_chat", "Clear", key_display="^L"),
+        Binding("ctrl+d", "toggle_dark", "Theme", key_display="^D"),
+        Binding("f1", "help", "Help"),
+        Binding("ctrl+q", "quit", "Quit", key_display="^Q"),
     ]
 
     def __init__(self, session_info: dict | None = None, **kwargs):
@@ -41,19 +43,10 @@ class MainScreen(Screen):
 
     def compose(self) -> ComposeResult:
         """Compose the main screen layout."""
-        yield Header(show_clock=True)
-
-        with Horizontal(id="main-container"):
-            # Side panel on the left
-            yield SidePanel(session_info=self.session_info, id="sidebar")
-
-            # Main content area on the right
-            with Vertical(id="content"):
-                yield ChatLog(id="chat_log")
-                yield StatusBar(id="status_bar")
-                yield InputBox(id="input_box")
-
-        yield Footer()
+        with Vertical(id="codex-shell"):
+            yield ChatLog(id="chat_log")
+            yield StatusBar(id="status_bar")
+            yield InputBox(id="input_box")
 
     def on_mount(self) -> None:
         """Called when screen is mounted."""
@@ -64,11 +57,13 @@ class MainScreen(Screen):
         except Exception:
             pass
         chat_log = self.query_one("#chat_log", ChatLog)
+        chat_log.add_session_header(self.session_info)
         is_agent_ready = bool(getattr(self.app, "is_agent_ready", True))
         if is_agent_ready:
-            chat_log.add_system_message("Deep Code Agent ready! Type your request below.")
+            chat_log.add_system_message("Tip: Use /skills to list available skills.")
         else:
             chat_log.add_system_message("Initializing agent...")
+        self.update_session_info(self.session_info)
 
     def action_toggle_dark(self) -> None:
         """Toggle dark mode."""
@@ -77,8 +72,20 @@ class MainScreen(Screen):
 
     def action_help(self) -> None:
         """Show help screen."""
-        # TODO: Push help screen
-        self.notify("Help screen coming soon!", severity="information")
+        commands = "\n".join(f"{command.name} - {command.description}" for command in SLASH_COMMANDS)
+        self.notify(
+            f"Enter send\nCtrl+L clear chat\nCtrl+D theme\n\n{commands}",
+            title="Shortcuts",
+            severity="information",
+            timeout=8,
+        )
+
+    def action_clear_chat(self) -> None:
+        """Clear the conversation stream."""
+        chat_log = self.get_chat_log()
+        chat_log.clear_messages()
+        chat_log.add_session_header(self.session_info)
+        chat_log.add_system_message("Conversation cleared.")
 
     def action_quit(self) -> None:
         """Quit the application."""
@@ -96,15 +103,21 @@ class MainScreen(Screen):
         """Get the status bar widget."""
         return self.query_one("#status_bar", StatusBar)
 
-    def get_side_panel(self) -> SidePanel:
-        """Get the side panel widget."""
-        return self.query_one("#sidebar", SidePanel)
-
     def update_session_info(self, session_info: dict) -> None:
         """Update session information."""
         self.session_info = session_info
-        side_panel = self.get_side_panel()
-        side_panel.session_info = session_info
+        try:
+            self.get_chat_log().update_session_header(session_info)
+        except Exception:
+            pass
+        try:
+            self.get_status_bar().session_info = session_info
+        except Exception:
+            pass
+        try:
+            self.get_input_box().session_info = session_info
+        except Exception:
+            pass
 
     from textual import work
 
@@ -124,9 +137,60 @@ class MainScreen(Screen):
 
     def on_input_box_user_input(self, event: InputBox.UserInput) -> None:
         """Handle user input from InputBox and forward to app."""
+        if self._handle_local_command(event.content):
+            return
+
         # Add user message to chat log immediately
         chat_log = self.get_chat_log()
         chat_log.add_user_message(event.content)
 
         # Start the worker
         self.process_agent_request(event.content)
+
+    def _handle_local_command(self, content: str) -> bool:
+        """Handle local slash commands before they reach the agent."""
+        command = canonical_command_name(content)
+        if command is None:
+            return False
+        if command == "/exit":
+            self.app.exit()
+            return True
+        if command == "/clear":
+            self.action_clear_chat()
+            return True
+        if command == "/help":
+            self.action_help()
+            return True
+        if command == "/skills":
+            self.get_chat_log().add_system_message(self._format_skills_message())
+            return True
+        if command == "/model":
+            self.get_chat_log().add_system_message(self._format_model_message())
+            return True
+        return False
+
+    def _format_skills_message(self) -> str:
+        skills = self.session_info.get("skills") or []
+        names: list[str] = []
+        for skill_dir in skills:
+            try:
+                for child in Path(str(skill_dir)).iterdir():
+                    if child.is_dir() and (child / "SKILL.md").exists():
+                        names.append(child.name)
+            except OSError:
+                continue
+
+        if names:
+            unique_names = sorted(set(names))
+            return "Available skills:\n" + "\n".join(f"- {name}" for name in unique_names)
+        if skills:
+            return "No skills found under configured skill directories."
+        return "No local skills directory is configured for this session."
+
+    def _format_model_message(self) -> str:
+        model = str(self.session_info.get("model") or self.session_info.get("model_name") or "default")
+        provider = str(self.session_info.get("model_provider") or "openai")
+        return (
+            f"Current model: {model} ({provider}).\n"
+            "Change it by restarting with --model-name or updating MODEL_NAME in .env."
+        )

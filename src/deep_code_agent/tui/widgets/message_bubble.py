@@ -5,10 +5,7 @@ from textual.widgets import Static
 
 
 class MessageBubble(Vertical):
-    """A bubble displaying a chat message.
-
-    Shows user messages on the right (aligned) and agent messages on the left.
-    System messages are centered and styled differently.
+    """A transcript row displaying a chat message.
 
     Args:
         content: The message content to display
@@ -18,45 +15,35 @@ class MessageBubble(Vertical):
     DEFAULT_CSS = """
     MessageBubble {
         width: 100%;
-        margin: 1 0;
+        margin: 0 0 1 0;
         height: auto;
+        padding: 0;
     }
 
     MessageBubble.user {
-        align: right middle;
+        background: #343434;
+        padding: 1 1;
+        margin: 1 0 1 0;
     }
 
     MessageBubble.agent {
-        align: left middle;
+        background: transparent;
     }
 
     MessageBubble.system {
-        align: center middle;
-    }
-
-    MessageBubble .bubble-content {
-        max-width: 80%;
-        padding: 1 2;
-        height: auto;
-    }
-
-    MessageBubble .role-label {
-        text-style: bold;
-        margin-bottom: 1;
-    }
-
-    MessageBubble.user .role-label {
-        color: $primary;
-    }
-
-    MessageBubble.agent .role-label {
-        color: $success;
+        background: transparent;
+        color: #d0d0d0;
     }
 
     MessageBubble .message-text {
         width: 100%;
         height: auto;
         text-wrap: wrap;
+        color: #e8e8e8;
+    }
+
+    MessageBubble.system .message-text {
+        color: #d2d2d2;
     }
     """
 
@@ -67,11 +54,8 @@ class MessageBubble(Vertical):
         self.add_class(role)
 
     def compose(self):
-        """Compose the message bubble."""
-        with Vertical(classes="bubble-content"):
-            if self.role != "system":
-                yield Static(f"{self.role.upper()}", classes="role-label")
-            yield Static(self.content, classes="message-text")
+        """Compose the transcript row."""
+        yield Static(self._display_text(), classes="message-text", markup=False)
 
     def update_content(self, new_content: str) -> None:
         """Update the bubble content (useful for streaming)."""
@@ -83,4 +67,11 @@ class MessageBubble(Vertical):
             # streamed chunks complete in the same event-loop turn. Storing
             # content is enough; compose() will render the latest value.
             return
-        content_widget.update(new_content)
+        content_widget.update(self._display_text())
+
+    def _display_text(self) -> str:
+        marker = "›" if self.role == "user" else "•"
+        lines = self.content.splitlines() or [""]
+        out = [f"{marker} {lines[0]}"]
+        out.extend(f"  {line}" if line else "" for line in lines[1:])
+        return "\n".join(out)

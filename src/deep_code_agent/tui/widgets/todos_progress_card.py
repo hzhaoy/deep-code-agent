@@ -22,17 +22,16 @@ class TodosProgressCard(Vertical):
     TodosProgressCard {
         width: 100%;
         height: auto;
-        margin: 1 0;
-        padding: 1;
-        background: #172033;
-        border: solid $secondary;
+        margin: 0 0 1 0;
+        padding: 0;
+        background: transparent;
         display: block;
     }
 
     TodosProgressCard .todos-header {
         text-style: bold;
-        color: #a6e3ff;
-        margin-bottom: 1;
+        color: #ededed;
+        margin-bottom: 0;
     }
 
     TodosProgressCard .todos-body {
@@ -43,30 +42,31 @@ class TodosProgressCard(Vertical):
         width: 100%;
         height: auto;
         text-wrap: wrap;
+        color: #9a9a9a;
     }
 
     TodosProgressCard .todo-pending {
-        color: $warning;
+        color: #9a9a9a;
     }
 
     TodosProgressCard .todo-in_progress {
-        color: $accent;
+        color: #58c7ff;
     }
 
     TodosProgressCard .todo-completed {
-        color: $success;
+        color: #7ed98a;
     }
 
     TodosProgressCard .todo-failed {
-        color: $error;
+        color: #ff9a9a;
     }
     """
 
     STATUS_ICONS = {
-        "pending": "○",
-        "in_progress": "◐",
-        "completed": "✓",
-        "failed": "✗",
+        "pending": "[ ]",
+        "in_progress": "[~]",
+        "completed": "[x]",
+        "failed": "[!]",
     }
 
     STATUS_LABELS = {
@@ -85,7 +85,7 @@ class TodosProgressCard(Vertical):
 
     def compose(self):
         """Compose the todos card."""
-        header = Static(self._header_text(), classes="todos-header")
+        header = Static(self._header_text(), classes="todos-header", markup=False)
         self._header_static = header
         yield header
 
@@ -106,7 +106,7 @@ class TodosProgressCard(Vertical):
         return coerced
 
     def _header_text(self) -> str:
-        marker = "▼" if self.expanded else "▶"
+        marker = "Working" if self.expanded else "Plan"
         counts = {status: 0 for status in self.STATUS_ICONS}
         for todo in self.todos:
             counts[todo["status"]] += 1
@@ -122,15 +122,16 @@ class TodosProgressCard(Vertical):
             summary_parts.append(f"{counts['pending']} pending")
         summary = ", ".join(summary_parts) if summary_parts else "no tasks"
 
-        return f"{marker} 📋 Todos ({summary})"
+        return f"• {marker} ({summary})"
 
     def _make_row(self, todo: TodoItem) -> Static:
         status = todo["status"]
         icon = self.STATUS_ICONS[status]
         label = self.STATUS_LABELS[status]
         return Static(
-            f"{icon} [{label}] {todo['content']}",
+            f"└ {icon} {label}: {todo['content']}",
             classes=f"todo-row todo-{status}",
+            markup=False,
         )
 
     def _refresh_header(self) -> None:

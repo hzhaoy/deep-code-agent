@@ -288,10 +288,13 @@ def _run_tui_mode(args) -> None:
         args: Parsed command line arguments
     """
     import os
+    from dotenv import load_dotenv
     from deep_code_agent.tui import DeepCodeAgentApp
 
     # Get codebase directory
     codebase_dir = os.getcwd()
+    dotenv_path = Path(codebase_dir) / ".env"
+    load_dotenv(dotenv_path=dotenv_path if dotenv_path.exists() else None)
 
     print(f"🚀 Starting Deep Code Agent TUI...")
     print(f"📁 Codebase: {codebase_dir}")
@@ -301,8 +304,11 @@ def _run_tui_mode(args) -> None:
 
     try:
         session_info = {
-            "model": args.model_name or "default",
+            "model": args.model_name or os.getenv("MODEL_NAME") or "default",
+            "model_provider": args.model_provider,
+            "version": __version__,
             "session_id": args.thread_id,
+            "directory": codebase_dir,
             "codebase_dir": codebase_dir,
             "skills": _resolve_skills(args, codebase_dir) or [],
         }

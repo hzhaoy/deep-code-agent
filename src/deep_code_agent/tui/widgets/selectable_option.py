@@ -19,25 +19,31 @@ class SelectableOption(Horizontal):
     SelectableOption {
         width: 100%;
         height: auto;
-        padding: 0 1;
+        padding: 1;
+        margin-bottom: 1;
+        border: solid #30362f;
+        background: #151817;
     }
 
-    SelectableOption:focus {
-        background: $primary-darken-1;
+    SelectableOption.selected {
+        border: tall #7dc4a4;
+        background: #18231d;
     }
 
     SelectableOption #option-marker {
-        width: 2;
+        width: 3;
         text-style: bold;
+        color: #7dc4a4;
     }
 
     SelectableOption #option-label {
         width: 1fr;
+        text-style: bold;
     }
 
     SelectableOption #option-description {
         width: auto;
-        color: $text-muted;
+        color: #90998f;
     }
     """
 
@@ -59,21 +65,24 @@ class SelectableOption(Horizontal):
         self.label = label
         self.description = description
         self.selected = selected
+        if selected:
+            self.add_class("selected")
 
     def compose(self):
         """Compose the option widget."""
-        marker = "▶" if self.selected else " "
-        yield Static(marker, id="option-marker")
-        yield Static(f"{self.key}. {self.label}", id="option-label")
-        yield Static(self.description, id="option-description")
+        marker = ">" if self.selected else " "
+        yield Static(marker, id="option-marker", markup=False)
+        yield Static(f"{self.key}. {self.label}", id="option-label", markup=False)
+        yield Static(self.description, id="option-description", markup=False)
 
     def watch_selected(self, selected: bool) -> None:
         """Update marker when selection changes."""
         try:
             marker_widget = self.query_one("#option-marker", Static)
-            marker_widget.update("▶" if selected else " ")
+            marker_widget.update(">" if selected else " ")
         except Exception:
             pass
+        self.set_class(selected, "selected")
 
     def set_selected(self, selected: bool) -> None:
         """Set selection state."""
