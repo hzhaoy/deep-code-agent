@@ -17,7 +17,6 @@ from deep_code_agent.tui.screens.main_screen import MainScreen
 if TYPE_CHECKING:
     from deep_code_agent.tui.widgets.chat_log import ChatLog
     from deep_code_agent.tui.widgets.input_box import InputBox
-    from deep_code_agent.tui.widgets.side_panel import SidePanel
     from deep_code_agent.tui.widgets.status_bar import StatusBar
 
 
@@ -35,7 +34,7 @@ class DeepCodeAgentApp(App):
     CSS_PATH = ["styles/main.tcss"]
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=True),
-        Binding("ctrl+d", "toggle_dark", "Toggle Dark Mode"),
+        Binding("ctrl+d", "toggle_dark", "Theme"),
         Binding("f1", "help", "Help"),
     ]
 
@@ -79,7 +78,7 @@ class DeepCodeAgentApp(App):
         self._chat_log: ChatLog | None = None
         self._status_bar: StatusBar | None = None
         self._input_box: InputBox | None = None
-        self._side_panel: SidePanel | None = None
+        self._side_panel = None
 
     def compose(self) -> ComposeResult:
         """Compose the application."""
@@ -98,7 +97,8 @@ class DeepCodeAgentApp(App):
         self._chat_log = screen.get_chat_log()
         self._status_bar = screen.get_status_bar()
         self._input_box = screen.get_input_box()
-        self._side_panel = screen.get_side_panel()
+        self._status_bar.session_info = self.session_info
+        self._input_box.session_info = self.session_info
         if self.bridge is None and self.agent_factory is not None:
             self.start_agent_initialization()
 
@@ -159,7 +159,7 @@ class DeepCodeAgentApp(App):
     def action_help(self) -> None:
         """Show help."""
         self.notify(
-            "Shortcuts:\n" "  Ctrl+C: Quit\n" "  Ctrl+D: Toggle dark mode\n" "  F1: Help\n" "  Tab: Navigate widgets",
+            "Enter send prompt\nCtrl+L clear chat\nCtrl+D theme\nTab navigate",
             title="Help",
             severity="information",
             timeout=10,
@@ -170,6 +170,8 @@ class DeepCodeAgentApp(App):
         self.session_info = session_info
         if self._main_screen is not None:
             self._main_screen.update_session_info(session_info)
+        if self._status_bar is not None:
+            self._status_bar.session_info = session_info
         self.sub_title = session_info.get("model", "AI Assistant")
 
     def get_bridge(self) -> AgentBridge:

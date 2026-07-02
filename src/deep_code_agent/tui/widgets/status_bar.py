@@ -1,7 +1,8 @@
 """Status bar widget for displaying application state."""
 
-from textual.widgets import Static
 from textual.reactive import reactive
+from textual.widgets import Static
+from rich.markup import escape
 
 
 class StatusBar(Static):
@@ -24,33 +25,17 @@ class StatusBar(Static):
 
     DEFAULT_CSS = """
     StatusBar {
-        height: 1;
-        dock: bottom;
-        background: $surface-darken-1;
-        color: $text;
-        content-align: center middle;
+        height: 2;
+        background: #171717;
+        color: #dcdcdc;
+        padding: 0 2 0 2;
+        content-align: left middle;
         text-style: none;
     }
 
-    StatusBar .status-icon {
-        text-style: bold;
-    }
-
-    StatusBar .status-ready {
-        color: $success;
-    }
-
-    StatusBar .status-thinking {
-        color: $warning;
-    }
-
-    StatusBar .status-waiting {
-        color: $error;
-    }
-
-    StatusBar .status-error {
-        color: $error;
-        text-style: bold;
+    StatusBar.error,
+    StatusBar.disconnected {
+        color: #ff9a9a;
     }
     """
 
@@ -61,14 +46,15 @@ class StatusBar(Static):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._status_icons = {
-            "ready": "🟢",
-            "thinking": "🤔",
-            "waiting_approval": "⏳",
-            "streaming": "📝",
-            "error": "❌",
-            "disconnected": "🔴",
+        self._status_labels = {
+            "ready": "Ready",
+            "thinking": "Working",
+            "waiting_approval": "Waiting for approval",
+            "streaming": "Streaming",
+            "error": "Error",
+            "disconnected": "Offline",
         }
+        self._status_classes = set(self._status_labels)
 
     def watch_status(self, status: str) -> None:
         """React to status changes."""
@@ -78,23 +64,35 @@ class StatusBar(Static):
         """React to message changes."""
         self._update_display()
 
+    def watch_session_info(self, session_info: dict) -> None:
+        """React to session metadata changes."""
+        self._update_display()
+
     def _update_display(self) -> None:
         """Update the status bar display."""
-        icon = self._status_icons.get(self.status, "⚪")
-        message = self.message or self.status.replace("_", " ").title()
+        for status_class in self._status_classes:
+            self.remove_class(status_class)
+        if self.status in self._status_classes:
+            self.add_class(self.status)
 
-        # Build session info string if available
-        session_str = ""
-        if self.session_info:
-            parts = []
-            if "model" in self.session_info:
-                parts.append(f"Model: {self.session_info['model']}")
-            if "session_id" in self.session_info:
-                parts.append(f"Session: {self.session_info['session_id'][:8]}...")
-            if parts:
-                session_str = " | " + " | ".join(parts)
+        label = self._status_labels.get(self.status, self.status.replace("_", " ").upper())
+        message = self.message.strip()
+        if message and message.lower() != label.lower():
+            text = f"{label} [dim]({escape(message)})[/dim]"
+        elif self.status == "thinking":
+            text = "Working [dim](esc to interrupt)[/dim]"
+        else:
+            text = label
 
-        self.update(f"{icon} {message}{session_str}")
+        bullet_color = {
+            "ready": "#21c45d",
+            "thinking": "#d6d6d6",
+            "streaming": "#55c7ff",
+            "waiting_approval": "#ffb86b",
+            "error": "#ff7b7b",
+            "disconnected": "#ff7b7b",
+        }.get(self.status, "#d6d6d6")
+        self.update(f"[{bullet_color}]•[/]  {text}")
 
     def update_status(
         self,

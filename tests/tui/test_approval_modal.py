@@ -122,3 +122,19 @@ def test_approval_modal_cancel_emits_rejection_decision():
             }
 
     asyncio.run(run_test())
+
+
+def test_approval_modal_extracts_nested_action_request():
+    """DeepAgents action request wrappers should render the real tool name."""
+    from deep_code_agent.tui.screens.approval_modal import ApprovalModal
+
+    interrupt_data = {
+        "action_requests": [
+            {"action": {"name": "read_file", "args": {"path": "test.txt"}}}
+        ]
+    }
+
+    modal = ApprovalModal(interrupt_data, callback=lambda d: None)
+
+    assert modal.tool_name == "read_file"
+    assert modal.tool_args == {"path": "test.txt"}

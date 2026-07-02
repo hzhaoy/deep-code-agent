@@ -95,6 +95,12 @@ class AgentBridge:
             if action_requests:
                 action = action_requests[0]
                 action_data = action.action if hasattr(action, "action") else action
+                if isinstance(action_data, dict) and isinstance(action_data.get("action"), dict):
+                    action_data = action_data["action"]
+                if hasattr(action_data, "model_dump"):
+                    action_data = action_data.model_dump()
+                if not isinstance(action_data, dict):
+                    return "unknown"
                 return action_data.get("name", "unknown")
 
             # Path 2: tool_calls (common in LangGraph)
@@ -162,6 +168,10 @@ class AgentBridge:
                 out: list[dict] = []
                 for ar in action_requests:
                     ar_data = ar.action if hasattr(ar, "action") else ar
+                    if isinstance(ar_data, dict) and isinstance(ar_data.get("action"), dict):
+                        ar_data = ar_data["action"]
+                    if hasattr(ar_data, "model_dump"):
+                        ar_data = ar_data.model_dump()
                     if isinstance(ar_data, dict):
                         out.append(ar_data)
                         continue
@@ -301,7 +311,6 @@ class AgentBridge:
             try:
                 from deep_code_agent.tui.widgets.chat_log import ChatLog
                 from deep_code_agent.tui.widgets.input_box import InputBox
-                from deep_code_agent.tui.widgets.side_panel import SidePanel
                 from deep_code_agent.tui.widgets.status_bar import StatusBar
 
                 chat_log = getattr(app, "_chat_log", None)
@@ -309,14 +318,13 @@ class AgentBridge:
                 input_box = getattr(app, "_input_box", None)
                 side_panel = getattr(app, "_side_panel", None)
 
-                if chat_log is None or status_bar is None or input_box is None or side_panel is None:
+                if chat_log is None or status_bar is None or input_box is None:
                     screen = getattr(app, "screen", None)
                     if screen is None:
                         raise RuntimeError("No active screen")
                     chat_log = screen.query_one("#chat_log", ChatLog)
                     status_bar = screen.query_one("#status_bar", StatusBar)
                     input_box = screen.query_one("#input_box", InputBox)
-                    side_panel = screen.query_one("#sidebar", SidePanel)
             except Exception as e:
                 message = f"[ERROR] Failed to get UI widgets: {e}"
                 if self._last_ui_error != message:
@@ -412,7 +420,8 @@ class AgentBridge:
                         # Fallback to old method
                         chat_log.add_tool_call(tool_name=tool_name, args=tool_args)
 
-                    side_panel.add_tool_call(tool_name=tool_name, args=tool_args)
+                    if side_panel is not None and hasattr(side_panel, "add_tool_call"):
+                        side_panel.add_tool_call(tool_name=tool_name, args=tool_args)
 
                 elif event.type == EventType.TOOL_START:
                     # Update tool status to running
@@ -539,7 +548,7 @@ class AgentBridge:
                                 # We're already in the main thread, so we can set directly
                                 setattr(app, "auto_approve_tools", auto_approve_tools + [tool_to_add])
                                 app.notify(
-                                    f"✓ Auto-approve enabled for: {tool_to_add}",
+                                    f"Auto-approve enabled for: {tool_to_add}",
                                     title="Auto-Approve",
                                     severity="information",
                                 )
@@ -565,7 +574,7 @@ class AgentBridge:
                     self._reset_streaming_state()
                     status_bar.set_error(event.data or "Unknown error")
                     input_box.set_disabled(False)
-                    chat_log.add_system_message(f"❌ Error: {event.data}")
+                    chat_log.add_system_message(f"Error: {event.data}")
 
                 elif event.type == EventType.DONE:
                     status_bar.set_ready()

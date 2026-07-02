@@ -1,5 +1,6 @@
 """Approval modal for HITL (Human-in-the-Loop) approval."""
 
+import json
 from typing import Callable
 
 from textual.app import ComposeResult
@@ -43,23 +44,25 @@ class ApprovalModal(ModalScreen):
         width: 80;
         height: auto;
         max-height: 90%;
-        background: $surface;
-        border: thick $primary;
-        padding: 1 2;
+        background: #111411;
+        border: thick #7dc4a4;
+        padding: 2;
     }
 
     ApprovalModal #dialog-title {
-        text-align: center;
+        content-align: center middle;
         text-style: bold;
-        color: $warning;
-        height: auto;
+        color: #f0f4ef;
+        height: 3;
         margin-bottom: 1;
+        border-bottom: solid #343832;
     }
 
     ApprovalModal #tool-info {
         margin: 1 0;
         padding: 1;
-        background: $surface-darken-1;
+        background: #171b17;
+        border: solid #2e342e;
         height: auto;
         max-height: 20;
         overflow: auto;
@@ -71,7 +74,7 @@ class ApprovalModal(ModalScreen):
 
     ApprovalModal #tool-name {
         text-style: bold;
-        color: $primary;
+        color: #a7cdbd;
         margin-bottom: 1;
     }
 
@@ -121,6 +124,12 @@ class ApprovalModal(ModalScreen):
                 self.action_requests = action_requests
                 action = action_requests[0]
                 action_data = action.action if hasattr(action, "action") else action
+                if isinstance(action_data, dict) and isinstance(action_data.get("action"), dict):
+                    action_data = action_data["action"]
+                if hasattr(action_data, "model_dump"):
+                    action_data = action_data.model_dump()
+                if not isinstance(action_data, dict):
+                    action_data = {}
                 self.tool_name = action_data.get("name", "unknown")
                 self.tool_args = action_data.get("args", {})
                 return
@@ -181,33 +190,32 @@ class ApprovalModal(ModalScreen):
     def _setup_options(self) -> None:
         """Setup options for the modal."""
         self.options = [
-            {"key": "1", "label": "Approve", "description": "✓ Allow this once", "action": "approve"},
+            {"key": "1", "label": "Approve", "description": "Allow this once", "action": "approve"},
             {
                 "key": "2",
-                "label": "Approve All for Tool",
-                "description": "✓ Always approve this tool",
+                "label": "Always Approve",
+                "description": "Trust this tool in this session",
                 "action": "approve_all",
             },
-            {"key": "3", "label": "Reject", "description": "❌ Block execution", "action": "reject"},
-            {"key": "4", "label": "Cancel", "description": "🚫 Dismiss dialog", "action": "cancel"},
+            {"key": "3", "label": "Reject", "description": "Block execution", "action": "reject"},
+            {"key": "4", "label": "Cancel", "description": "Dismiss dialog", "action": "cancel"},
         ]
 
     def compose(self) -> ComposeResult:
         """Compose the approval modal."""
         with Vertical():
-            yield Static("⚠️ Action Requires Approval", id="dialog-title")
+            yield Static("Action Requires Approval", id="dialog-title", markup=False)
 
             with Static(id="tool-info"):
                 tool_display = f"Tool: {self.tool_name}"
                 if self.tool_name == "unknown":
                     debug_data = getattr(self, "_debug_data", "N/A")
-                    debug_data = debug_data.replace("[", "\\[").replace("]", "\\]")
                     tool_display += f"\nDebug: {debug_data}"
-                yield Static(tool_display, id="tool-name")
-                yield Static(self._format_args(self.tool_args))
+                yield Static(tool_display, id="tool-name", markup=False)
+                yield Static(self._format_args(self.tool_args), markup=False)
 
             with Vertical(id="options-list"):
-                yield Static("Choose an action:")
+                yield Static("Choose an action:", markup=False)
                 for i, option in enumerate(self.options):
                     yield SelectableOption(
                         key=option["key"],
@@ -221,13 +229,13 @@ class ApprovalModal(ModalScreen):
         if not args:
             return "No arguments"
 
-        lines = ["Arguments:"]
-        for key, value in args.items():
-            value_str = str(value)
-            if len(value_str) > 200:
-                value_str = value_str[:200] + "..."
-            lines.append(f"  {key}: {value_str}")
-        return "\n".join(lines)
+        try:
+            formatted = json.dumps(args, indent=2, ensure_ascii=False, default=str)
+        except TypeError:
+            formatted = str(args)
+        if len(formatted) > 900:
+            formatted = formatted[:897] + "..."
+        return f"Arguments:\n{formatted}"
 
     def _update_selection(self) -> None:
         """Update visual selection state."""

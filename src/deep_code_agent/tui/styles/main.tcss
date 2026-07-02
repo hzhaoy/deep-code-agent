@@ -1,83 +1,53 @@
 /* Deep Code Agent TUI - Main Stylesheet */
 
-/* Global settings */
 * {
-    transition: all 200ms;
+    scrollbar-background: #171717;
+    scrollbar-color: #555555;
+    scrollbar-color-hover: #777777;
+    scrollbar-color-active: #999999;
 }
 
-/* Main layout */
 Screen {
-    background: #1a1a2e;
-    color: #eee;
+    background: #171717;
+    color: #e8e8e8;
 }
 
-#main-container {
-    height: 100%;
+Screen:light {
+    background: #f3f3f3;
+    color: #222222;
+}
+
+#codex-shell {
+    height: 1fr;
     width: 100%;
+    background: #171717;
 }
 
-#sidebar {
-    width: 25%;
-    min-width: 20;
-    max-width: 40;
-    border-right: solid #4a5568;
-    background: #16213e;
-}
-
-#content {
-    width: 75%;
-    height: 100%;
-}
-
-/* Chat log */
 #chat_log {
     height: 1fr;
-    border: solid #2d3748;
-    padding: 0 1;
-    background: #1a1a2e;
+    border: none;
+    padding: 0;
+    background: #171717;
 }
 
-/* Input box */
 #input_box {
     height: auto;
-    margin-top: 1;
-    background: #16213e;
 }
 
 #user-input {
-    width: 1fr;
+    width: 100%;
 }
 
-#send-button {
-    width: auto;
-    margin-left: 1;
+Screen:light #codex-shell,
+Screen:light #chat_log {
+    background: #f3f3f3;
 }
 
-/* Status bar */
-#status_bar {
-    height: 1;
-    background: #0f3460;
-    color: #eee;
-    content-align: center middle;
+Screen:light InputBox,
+Screen:light StatusBar {
+    background: #f3f3f3;
 }
 
-/* Message bubbles */
-MessageBubble {
-    margin: 1 0;
-    padding: 1;
-}
-
-MessageBubble.user {
-    background: #2d5a87;
-    border-right: thick #4a90d9;
-}
-
-MessageBubble.agent {
-    background: #1e3a5f;
-    border-left: thick #4ecdc4;
-}
-
-MessageBubble.system {
-    background: #3d3d3d;
-    text-style: italic;
+Screen:light InputBox #prompt-row {
+    background: #e0e0e0;
 }

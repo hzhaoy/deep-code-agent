@@ -4,6 +4,7 @@ from textual.containers import VerticalScroll
 from textual.reactive import reactive
 
 from deep_code_agent.tui.widgets.message_bubble import MessageBubble
+from deep_code_agent.tui.widgets.session_header import SessionHeader
 from deep_code_agent.tui.widgets.todos_progress_card import TodosProgressCard
 
 
@@ -22,14 +23,14 @@ class ChatLog(VerticalScroll):
     DEFAULT_CSS = """
     ChatLog {
         width: 100%;
-        height: 100%;
-        border: solid $primary-darken-2;
-        padding: 0 1;
-        background: $surface-darken-2;
+        height: 1fr;
+        border: none;
+        padding: 0 2;
+        background: #171717;
     }
 
     ChatLog:focus {
-        border: solid $primary;
+        border: none;
     }
     """
 
@@ -39,6 +40,7 @@ class ChatLog(VerticalScroll):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._todos_card: TodosProgressCard | None = None
+        self._session_header: SessionHeader | None = None
 
     def compose(self):
         """Compose the chat log (empty initially)."""
@@ -51,6 +53,28 @@ class ChatLog(VerticalScroll):
             self.mount(widget, before=self._todos_card)
             return
         self.mount(widget)
+
+    def add_session_header(self, session_info: dict | None = None) -> SessionHeader:
+        """Add or replace the Codex-style session header."""
+        if self._session_header is not None:
+            try:
+                self._session_header.remove()
+            except Exception:
+                pass
+
+        header = SessionHeader(session_info or {})
+        self._session_header = header
+        if self.children:
+            self.mount(header, before=self.children[0])
+        else:
+            self.mount(header)
+        self._scroll_to_bottom()
+        return header
+
+    def update_session_header(self, session_info: dict) -> None:
+        """Update the session header if it is currently mounted."""
+        if self._session_header is not None:
+            self._session_header.session_info = session_info
 
     def add_user_message(self, content: str) -> MessageBubble:
         """Add a user message to the chat log.
@@ -102,7 +126,7 @@ class ChatLog(VerticalScroll):
             args: The tool arguments
         """
         # Format the tool call nicely
-        content = f"🔧 Tool call: {tool_name}"
+        content = f"Ran {tool_name}"
         bubble = MessageBubble(content, role="system")
         self._mount_above_todos_card(bubble)
         self._scroll_to_bottom()
@@ -176,6 +200,7 @@ class ChatLog(VerticalScroll):
         for child in list(self.children):
             child.remove()
         self._todos_card = None
+        self._session_header = None
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the chat log."""
