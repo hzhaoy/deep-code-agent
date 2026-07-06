@@ -161,6 +161,17 @@ class ChatLog(VerticalScroll):
         self._scroll_to_bottom()
         return widget
 
+    def add_approval_request(self, interrupt_data, callback, focus: bool = True):
+        """Add an inline HITL approval request to the chat log."""
+        from deep_code_agent.tui.widgets.approval_request import ApprovalRequest
+
+        widget = ApprovalRequest(interrupt_data, callback=callback)
+        self._mount_above_todos_card(widget)
+        self._scroll_to_bottom()
+        if focus:
+            self.call_after_refresh(widget.focus)
+        return widget
+
     def upsert_todos_card(self, todos: list[dict[str, str]]) -> TodosProgressCard:
         """Create or update the singleton todos progress card.
 

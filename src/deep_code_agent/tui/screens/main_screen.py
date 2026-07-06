@@ -72,13 +72,7 @@ class MainScreen(Screen):
 
     def action_help(self) -> None:
         """Show help screen."""
-        commands = "\n".join(f"{command.name} - {command.description}" for command in SLASH_COMMANDS)
-        self.notify(
-            f"Enter send\nCtrl+L clear chat\nCtrl+D theme\n\n{commands}",
-            title="Shortcuts",
-            severity="information",
-            timeout=8,
-        )
+        self.get_chat_log().add_system_message(self._format_help_message())
 
     def action_clear_chat(self) -> None:
         """Clear the conversation stream."""
@@ -130,7 +124,7 @@ class MainScreen(Screen):
             await bridge.process_request(content)
         except Exception as e:
             app = cast("DeepCodeAgentApp", self.app)
-            app.call_from_thread(self.notify, f"[ERROR] Worker error: {e}", title="ERROR", severity="error")
+            app.call_from_thread(self._show_worker_error, str(e))
             import traceback
 
             traceback.print_exc()
@@ -168,6 +162,25 @@ class MainScreen(Screen):
             self.get_chat_log().add_system_message(self._format_model_message())
             return True
         return False
+
+    def _show_worker_error(self, message: str) -> None:
+        """Render worker failures in the main UI instead of a transient popup."""
+        try:
+            self.get_status_bar().set_error(message)
+        except Exception:
+            pass
+        try:
+            self.get_input_box().set_disabled(False)
+        except Exception:
+            pass
+        try:
+            self.get_chat_log().add_system_message(f"Error: {message}")
+        except Exception:
+            pass
+
+    def _format_help_message(self) -> str:
+        commands = "\n".join(f"- {command.name}: {command.description}" for command in SLASH_COMMANDS)
+        return f"Shortcuts:\n- Enter: send\n- Ctrl+L: clear chat\n- Ctrl+D: theme\n\nCommands:\n{commands}"
 
     def _format_skills_message(self) -> str:
         skills = self.session_info.get("skills") or []

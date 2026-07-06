@@ -158,12 +158,8 @@ class DeepCodeAgentApp(App):
 
     def action_help(self) -> None:
         """Show help."""
-        self.notify(
-            "Enter send prompt\nCtrl+L clear chat\nCtrl+D theme\nTab navigate",
-            title="Help",
-            severity="information",
-            timeout=10,
-        )
+        if self._main_screen is not None:
+            self._main_screen.action_help()
 
     def update_session_info(self, session_info: dict) -> None:
         """Update session information."""

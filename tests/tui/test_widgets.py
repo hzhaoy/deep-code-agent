@@ -4,23 +4,6 @@ from textual.app import App
 from textual.widgets import Input, Static
 
 
-def test_selectable_option_creation():
-    """Test that SelectableOption can be created and rendered."""
-    from deep_code_agent.tui.widgets.selectable_option import SelectableOption
-
-    option = SelectableOption(
-        key="1",
-        label="Approve",
-        description="Allow execution",
-        selected=True
-    )
-
-    assert option.key == "1"
-    assert option.label == "Approve"
-    assert option.description == "Allow execution"
-    assert option.selected is True
-
-
 def test_message_bubble_update_before_compose_is_safe():
     """Streaming can update a newly mounted bubble before compose runs."""
     from deep_code_agent.tui.widgets.message_bubble import MessageBubble
@@ -232,3 +215,119 @@ def test_side_panel_compacts_long_codebase_path():
 
     assert compact.startswith("...")
     assert len(compact) <= 26
+
+
+def test_approval_request_resolves_inline_decision():
+    """The inline approval card should emit the same decision shape as the modal."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.approval_request import ApprovalRequest
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            results = {}
+            interrupt_data = {
+                "action_requests": [
+                    {"action": {"name": "write_file", "args": {"path": "hello.py"}}}
+                ]
+            }
+            widget = ApprovalRequest(interrupt_data, callback=lambda decision: results.setdefault("decision", decision))
+            await pilot.app.mount(widget)
+            await pilot.pause()
+
+            assert widget.tool_name == "write_file"
+            assert widget.selected_index == 0
+
+            widget.action_navigate_down()
+            assert widget.selected_index == 1
+
+            widget.action_select_index(2)
+            widget.action_confirm_selection()
+            await pilot.pause()
+
+            assert results["decision"] == {
+                "type": "reject",
+                "message": "Action rejected by user",
+            }
+            assert widget.has_class("resolved")
+
+    asyncio.run(run_test())
+
+
+def test_chat_log_adds_inline_approval_request():
+    """Approval prompts should mount inside the transcript, not as a screen."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.approval_request import ApprovalRequest
+    from deep_code_agent.tui.widgets.chat_log import ChatLog
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            chat_log = ChatLog()
+            await pilot.app.mount(chat_log)
+            await pilot.pause()
+
+            widget = chat_log.add_approval_request(
+                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                callback=lambda decision: None,
+            )
+            await pilot.pause()
+
+            assert isinstance(widget, ApprovalRequest)
+            assert widget in chat_log.children
+
+    asyncio.run(run_test())
+
+
+def test_chat_log_focuses_inline_approval_request():
+    """Keyboard navigation should work without clicking the approval card first."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.chat_log import ChatLog
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            chat_log = ChatLog()
+            await pilot.app.mount(chat_log)
+            await pilot.pause()
+
+            widget = chat_log.add_approval_request(
+                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                callback=lambda decision: None,
+            )
+            await pilot.pause()
+
+            assert pilot.app.focused is widget
+
+            await pilot.press("down")
+            await pilot.pause()
+            assert widget.selected_index == 1
+
+    asyncio.run(run_test())
+
+
+def test_approval_request_mouse_click_only_focuses():
+    """Clicking an option should not approve or reject the request."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.approval_request import ApprovalChoice, ApprovalRequest
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            decisions = []
+            widget = ApprovalRequest(
+                {"action_requests": [{"action": {"name": "write_file", "args": {"path": "hello.py"}}}]},
+                callback=decisions.append,
+            )
+            await pilot.app.mount(widget)
+            await pilot.pause()
+
+            clicked = await pilot.click(ApprovalChoice)
+            await pilot.pause()
+
+            assert clicked is True
+            assert decisions == []
+            assert widget.selected_index == 0
+            assert pilot.app.focused is widget
+
+    asyncio.run(run_test())
