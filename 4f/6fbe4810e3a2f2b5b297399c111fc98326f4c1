@@ -1,0 +1,31 @@
+src/deep_code_agent/tui/screens/main_screen.py
+  s_360f6511af2f2b::t_91111a9a1aede3 80-82
+src/deep_code_agent/tui/widgets/approval_request.py
+  s_360f6511af2f2b::t_00f5023dafeb66 210-213
+src/deep_code_agent/tui/widgets/chat_log.py
+  s_360f6511af2f2b::t_7197f70f330b76 175-180
+src/deep_code_agent/tui/widgets/input_box.py
+  s_360f6511af2f2b::t_90965d3fe997e3 16,19-20,25,30,143-145,186-187,190-191,217-219,250-263,280-310,322-330
+tests/tui/test_main_screen_commands.py
+  s_360f6511af2f2b::t_1de1d75efb9d5a 100-159
+tests/tui/test_widgets.py
+  s_360f6511af2f2b::t_257bbc5977e77e 209-313,387-412
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "4f6fbe4810e3a2f2b5b297399c111fc98326f4c1",
+  "prompts": {},
+  "sessions": {
+    "s_360f6511af2f2b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f380e-c2b1-79e3-96a9-facb2a757c75",
+        "model": "unknown"
+      },
+      "human_author": "hzhaoy <hzywong@gmail.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
