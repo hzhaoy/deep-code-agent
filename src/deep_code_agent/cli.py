@@ -296,7 +296,7 @@ def _run_tui_mode(args) -> None:
     dotenv_path = Path(codebase_dir) / ".env"
     load_dotenv(dotenv_path=dotenv_path if dotenv_path.exists() else None)
 
-    print(f"🚀 Starting Deep Code Agent TUI...")
+    print("🚀 Starting Deep Code Agent TUI...")
     print(f"📁 Codebase: {codebase_dir}")
 
     def agent_factory():

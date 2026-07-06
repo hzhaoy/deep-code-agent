@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from deep_code_agent import __version__
 from textual.reactive import reactive
@@ -22,7 +23,7 @@ class SessionHeader(Static):
     }
     """
 
-    session_info = reactive({})
+    session_info: reactive[dict[str, Any]] = reactive({})
 
     def __init__(self, session_info: dict | None = None, **kwargs) -> None:
         super().__init__("", markup=False, **kwargs)

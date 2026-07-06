@@ -66,6 +66,7 @@ def create_code_agent(
     system_prompt = get_system_prompt().format(codebase_dir=codebase_dir)
     model = model or create_chat_model()
     subagents = create_subagent_configurations()
+    backend: Any
 
     if backend_type == "filesystem":
         from deepagents.backends.filesystem import FilesystemBackend
@@ -75,9 +76,10 @@ def create_code_agent(
     elif backend_type == "state":
         from deepagents.backends.state import StateBackend
 
-        def backend(rt):
+        def create_state_backend(rt: Any) -> Any:
             return StateBackend(rt)
 
+        backend = create_state_backend
         tools = []
     else:
         raise ValueError(f"Unsupported backend_type: {backend_type}")

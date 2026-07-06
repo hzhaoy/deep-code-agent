@@ -1,6 +1,7 @@
 """Input composer widget for user message entry."""
 
 from pathlib import Path
+from typing import Any
 
 from rich.markup import escape
 from textual.binding import Binding
@@ -134,7 +135,7 @@ class InputBox(Vertical):
 
     # Reactive state
     disabled = reactive(False)
-    session_info = reactive({})
+    session_info: reactive[dict[str, Any]] = reactive({})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,8 +1,10 @@
 """Status bar widget for displaying application state."""
 
+from typing import Any
+
+from rich.markup import escape
 from textual.reactive import reactive
 from textual.widgets import Static
-from rich.markup import escape
 
 
 class StatusBar(Static):
@@ -42,7 +44,7 @@ class StatusBar(Static):
     # Reactive state
     status = reactive("ready")
     message = reactive("")
-    session_info = reactive({})
+    session_info: reactive[dict[str, Any]] = reactive({})
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

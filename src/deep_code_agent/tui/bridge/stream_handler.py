@@ -1,6 +1,5 @@
 """Stream handler for processing LangGraph Agent output."""
 
-import asyncio
 import json
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -154,7 +153,8 @@ class StreamHandler:
             for item in additional_kwargs.get("tool_calls") or []:
                 if not isinstance(item, dict):
                     continue
-                function = item.get("function") if isinstance(item.get("function"), dict) else {}
+                function_value = item.get("function")
+                function = function_value if isinstance(function_value, dict) else {}
                 add_chunk(
                     {
                         "id": item.get("id"),
@@ -249,7 +249,8 @@ class StreamHandler:
                 pass
 
         if isinstance(tc, dict):
-            function = tc.get("function") if isinstance(tc.get("function"), dict) else {}
+            function_value = tc.get("function")
+            function = function_value if isinstance(function_value, dict) else {}
             tool_name = tc.get("name") or tc.get("tool_name") or function.get("name") or ""
             raw_args = tc.get("args") if "args" in tc else function.get("arguments")
             tool_args = self._coerce_tool_args(raw_args)

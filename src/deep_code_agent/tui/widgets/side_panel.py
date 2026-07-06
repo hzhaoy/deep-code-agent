@@ -1,6 +1,7 @@
 """Side panel widget for session context and recent activity."""
 
 from pathlib import Path
+from typing import Any
 
 from textual.containers import Vertical
 from textual.reactive import reactive
@@ -72,8 +73,8 @@ class SidePanel(Vertical):
     }
     """
 
-    session_info = reactive({})
-    tool_calls = reactive(list)
+    session_info: reactive[dict[str, Any]] = reactive({})
+    tool_calls: reactive[list[dict[str, Any]]] = reactive(list)
 
     def __init__(self, session_info: dict | None = None, **kwargs):
         super().__init__(**kwargs)
