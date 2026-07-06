@@ -1,0 +1,47 @@
+.github/workflows/pr-check.yml
+  s_360f6511af2f2b::t_1e1556b9659bb7 28-33
+README.md
+  s_360f6511af2f2b::t_27272ef8bcf902 203-212
+pyproject.toml
+  s_360f6511af2f2b::t_abf7b41559e0df 27-36,41,44
+src/deep_code_agent/cli.py
+  s_360f6511af2f2b::t_0415c97badc08c 299
+src/deep_code_agent/code_agent.py
+  s_360f6511af2f2b::t_36d4217824283e 69,79,82
+src/deep_code_agent/models/llms/langchain_chat.py
+  s_360f6511af2f2b::t_b08ba6cb7a0b41 14
+src/deep_code_agent/tui/app.py
+  s_360f6511af2f2b::t_1f85346d5cfa00 43-44
+src/deep_code_agent/tui/bridge/stream_handler.py
+  s_360f6511af2f2b::t_021e53afc5dfea 156-157,252-253
+src/deep_code_agent/tui/screens/main_screen.py
+  s_360f6511af2f2b::t_c63cb16ded57bd 8
+src/deep_code_agent/tui/widgets/input_box.py
+  s_360f6511af2f2b::t_a52b88970143d9 4,138
+src/deep_code_agent/tui/widgets/session_header.py
+  s_360f6511af2f2b::t_97a854ae22a8a2 6,26
+src/deep_code_agent/tui/widgets/side_panel.py
+  s_360f6511af2f2b::t_279f1e5886acb4 4,76-77
+src/deep_code_agent/tui/widgets/status_bar.py
+  s_360f6511af2f2b::t_4cae7c07330d3d 3-5,47
+uv.lock
+  s_360f6511af2f2b::t_ea36f7a0ab661d 4-7,49-89,375,378,395,398,1014-1062,1125-1170,1357-1365,1736-1760
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "3676ea01113b6b21f4c921dec7aa732c27c13b57",
+  "prompts": {},
+  "sessions": {
+    "s_360f6511af2f2b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f380e-c2b1-79e3-96a9-facb2a757c75",
+        "model": "unknown"
+      },
+      "human_author": "hzhaoy <hzywong@gmail.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
