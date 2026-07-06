@@ -1,0 +1,27 @@
+src/deep_code_agent/tui/__init__.py
+  s_146a350ce16aa7::t_c1465ef8eea337 4
+src/deep_code_agent/tui/utils/approval.py
+  s_146a350ce16aa7::t_98bc639a4c9fb6 1-129
+src/deep_code_agent/tui/widgets/approval_request.py
+  s_146a350ce16aa7::t_5b2f894d07616c 1-3,6,9-11,14-15,17-26,28-31,33-53,55-57,60-107,109-118,122-128,131-137,140-142,146,148-150,153-157,160-162,165-166,168-186,190-199,203-208,211-228,232,239-247,249-251,256-257,262-264,268-270,274-284,290,294,298,302-309,311-326
+src/deep_code_agent/tui/widgets/chat_log.py
+  s_146a350ce16aa7::t_d4277f7a18d200 164-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "0c40e8e82eb7855e0d27bb6d0a672af5f8a9b114",
+  "prompts": {},
+  "sessions": {
+    "s_146a350ce16aa7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f37ba-9d18-7113-b3f3-b1019884da94",
+        "model": "unknown"
+      },
+      "human_author": "hzhaoy <hzywong@gmail.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
