@@ -207,6 +207,10 @@ class ApprovalRequest(Vertical, can_focus=True):
         self._debug_data = tool_call.debug_data
         self._resolved = False
 
+    @property
+    def is_pending(self) -> bool:
+        return not self._resolved
+
     def compose(self) -> ComposeResult:
         yield Static("Tool approval required", id="approval-title", markup=False)
         yield Static(self._summary_text(), id="approval-summary", markup=False)

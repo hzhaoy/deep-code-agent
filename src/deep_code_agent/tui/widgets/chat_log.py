@@ -172,6 +172,12 @@ class ChatLog(VerticalScroll):
             self.call_after_refresh(widget.focus)
         return widget
 
+    def has_pending_approval_request(self) -> bool:
+        """Return whether the transcript contains an unresolved approval card."""
+        from deep_code_agent.tui.widgets.approval_request import ApprovalRequest
+
+        return any(widget.is_pending for widget in self.query(ApprovalRequest))
+
     def upsert_todos_card(self, todos: list[dict[str, str]]) -> TodosProgressCard:
         """Create or update the singleton todos progress card.
 

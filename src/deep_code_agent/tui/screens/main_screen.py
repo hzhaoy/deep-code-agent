@@ -77,6 +77,9 @@ class MainScreen(Screen):
     def action_clear_chat(self) -> None:
         """Clear the conversation stream."""
         chat_log = self.get_chat_log()
+        if chat_log.has_pending_approval_request():
+            self.get_status_bar().set_waiting_approval("Resolve approval before clearing")
+            return
         chat_log.clear_messages()
         chat_log.add_session_header(self.session_info)
         chat_log.add_system_message("Conversation cleared.")

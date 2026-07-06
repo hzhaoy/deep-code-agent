@@ -13,21 +13,21 @@ from deep_code_agent.tui.commands import SlashCommand, command_token, filter_sla
 
 
 class ComposerInput(Input):
-    """Prompt input with slash-command navigation keys."""
+    """Prompt input with navigation keys delegated to the composer."""
 
     BINDINGS = [
-        Binding("up", "slash_previous", "Previous command", show=False, priority=True),
-        Binding("down", "slash_next", "Next command", show=False, priority=True),
+        Binding("up", "slash_previous", "Previous prompt", show=False, priority=True),
+        Binding("down", "slash_next", "Next prompt", show=False, priority=True),
         Binding("tab", "slash_complete", "Complete command", show=False, priority=True),
     ]
 
     def action_slash_previous(self) -> None:
-        handler = getattr(self.parent, "select_previous_slash_command", None)
+        handler = getattr(self.parent, "select_previous_prompt_item", None)
         if callable(handler):
             handler()
 
     def action_slash_next(self) -> None:
-        handler = getattr(self.parent, "select_next_slash_command", None)
+        handler = getattr(self.parent, "select_next_prompt_item", None)
         if callable(handler):
             handler()
 
@@ -140,6 +140,9 @@ class InputBox(Vertical):
         super().__init__(*args, **kwargs)
         self._slash_commands: list[SlashCommand] = []
         self._slash_index = 0
+        self._input_history: list[str] = []
+        self._history_index: int | None = None
+        self._history_draft = ""
 
     class UserInput(Message):
         """Message sent when user submits input.
@@ -180,12 +183,12 @@ class InputBox(Vertical):
         self._submit_input()
 
     def action_slash_previous(self) -> None:
-        """Select the previous visible slash command."""
-        self.select_previous_slash_command()
+        """Select the previous slash command or history item."""
+        self.select_previous_prompt_item()
 
     def action_slash_next(self) -> None:
-        """Select the next visible slash command."""
-        self.select_next_slash_command()
+        """Select the next slash command or history item."""
+        self.select_next_prompt_item()
 
     def action_slash_complete(self) -> None:
         """Complete the selected slash command, or fall back to focus navigation."""
@@ -211,6 +214,9 @@ class InputBox(Vertical):
         content = input_widget.value.strip()
 
         if content:
+            self._input_history.append(content)
+            self._history_index = None
+            self._history_draft = ""
             self.post_message(self.UserInput(content))
             input_widget.value = ""
             self._hide_slash_command_menu()
@@ -241,6 +247,20 @@ class InputBox(Vertical):
         """Focus the input field."""
         self.query_one("#user-input", Input).focus()
 
+    def select_previous_prompt_item(self) -> bool:
+        """Move up through slash suggestions or submitted input history."""
+        if self._is_slash_command_input():
+            self.select_previous_slash_command()
+            return True
+        return self.select_previous_history_item()
+
+    def select_next_prompt_item(self) -> bool:
+        """Move down through slash suggestions or submitted input history."""
+        if self._is_slash_command_input():
+            self.select_next_slash_command()
+            return True
+        return self.select_next_history_item()
+
     def select_previous_slash_command(self) -> bool:
         """Move the slash-command selection up."""
         if not self._slash_commands:
@@ -257,6 +277,37 @@ class InputBox(Vertical):
         self._render_slash_command_menu()
         return True
 
+    def select_previous_history_item(self) -> bool:
+        """Move to an older submitted prompt."""
+        if not self._input_history:
+            return False
+
+        input_widget = self.query_one("#user-input", Input)
+        if self._history_index is None:
+            self._history_draft = input_widget.value
+            self._history_index = len(self._input_history) - 1
+        elif self._history_index > 0:
+            self._history_index -= 1
+
+        self._set_input_value(self._input_history[self._history_index])
+        return True
+
+    def select_next_history_item(self) -> bool:
+        """Move to a newer submitted prompt, or restore the draft."""
+        if self._history_index is None:
+            return False
+
+        if self._history_index < len(self._input_history) - 1:
+            self._history_index += 1
+            value = self._input_history[self._history_index]
+        else:
+            self._history_index = None
+            value = self._history_draft
+            self._history_draft = ""
+
+        self._set_input_value(value)
+        return True
+
     def complete_selected_slash_command(self) -> bool:
         """Complete the currently selected slash command into the prompt."""
         if not self._slash_commands:
@@ -267,6 +318,15 @@ class InputBox(Vertical):
         input_widget.cursor_position = len(selected.name)
         self._hide_slash_command_menu()
         return True
+
+    def _set_input_value(self, value: str) -> None:
+        input_widget = self.query_one("#user-input", Input)
+        input_widget.value = value
+        input_widget.cursor_position = len(value)
+
+    def _is_slash_command_input(self) -> bool:
+        input_widget = self.query_one("#user-input", Input)
+        return self._history_index is None and command_token(input_widget.value) is not None
 
     def _refresh_slash_command_menu(self, value: str) -> None:
         menu = self.query_one("#slash-command-menu", Static)
