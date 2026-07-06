@@ -263,7 +263,6 @@ class AgentBridge:
             pass
         except Exception as e:
             # Dispatch error event
-            self._run_on_app(self.app.notify, f"[ERROR] {e}", title="Error", severity="error")
             import traceback
 
             traceback.print_exc()
@@ -272,11 +271,11 @@ class AgentBridge:
     async def resume_with_decision(self, decision: dict) -> None:
         """Resume after HITL decision.
 
-        Called when the user has made a decision in the ApprovalModal.
+        Called when the user has made a HITL approval decision.
         Resumes the agent stream with the decision.
 
         Args:
-            decision: User decision dict from ApprovalModal
+            decision: User decision dict from the approval UI
         """
         if self.stream_handler is None or self.app is None:
             return
@@ -537,9 +536,6 @@ class AgentBridge:
                         asyncio.create_task(self.resume_with_decision({"decisions": decisions}))
                         return
 
-                    # Show approval modal
-                    from deep_code_agent.tui.screens.approval_modal import ApprovalModal
-
                     def on_decision(decision: dict) -> None:
                         # Check if tool should be added to auto-approve
                         if decision.get("add_to_auto_approve", False):
@@ -547,11 +543,6 @@ class AgentBridge:
                             if tool_to_add and tool_to_add not in auto_approve_tools:
                                 # We're already in the main thread, so we can set directly
                                 setattr(app, "auto_approve_tools", auto_approve_tools + [tool_to_add])
-                                app.notify(
-                                    f"Auto-approve enabled for: {tool_to_add}",
-                                    title="Auto-Approve",
-                                    severity="information",
-                                )
 
                         if "decisions" in decision and isinstance(decision["decisions"], list):
                             decisions = decision["decisions"]
@@ -567,8 +558,7 @@ class AgentBridge:
                             decisions = [base for _ in range(self._pending_hitl_action_count)]
                         asyncio.create_task(self.resume_with_decision({"decisions": decisions}))
 
-                    modal = ApprovalModal(interrupt_data, callback=on_decision)
-                    app.push_screen(modal)
+                    chat_log.add_approval_request(interrupt_data, callback=on_decision)
 
                 elif event.type == EventType.ERROR:
                     self._reset_streaming_state()

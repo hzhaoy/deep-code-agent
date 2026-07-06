@@ -1,7 +1,7 @@
 """Deep Code Agent TUI - Textual-based terminal user interface.
 
 This module provides a rich terminal interface for the Deep Code Agent,
-featuring a chat-style conversation view, HITL approval modals, and
+featuring a chat-style conversation view, inline HITL approvals, and
 real-time streaming responses.
 
 Example:
