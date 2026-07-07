@@ -19,11 +19,15 @@ class SlashCommand:
 
 
 SLASH_COMMANDS: tuple[SlashCommand, ...] = (
-    SlashCommand("/help", "Show local TUI shortcuts and commands", aliases=("help", "/?")),
+    SlashCommand(
+        "/help", "Show local TUI shortcuts and commands", aliases=("help", "/?")
+    ),
     SlashCommand("/clear", "Clear the transcript", aliases=("clear",)),
     SlashCommand("/skills", "List configured local skills"),
     SlashCommand("/model", "Show current model configuration"),
-    SlashCommand("/exit", "Exit the TUI", aliases=("/quit", "/bye", "exit", "quit", "bye")),
+    SlashCommand(
+        "/exit", "Exit the TUI", aliases=("/quit", "/bye", "exit", "quit", "bye")
+    ),
 )
 
 

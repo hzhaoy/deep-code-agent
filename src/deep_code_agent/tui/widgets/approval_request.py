@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from contextlib import suppress
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -80,7 +81,9 @@ class ApprovalChoice(Horizontal):
     def compose(self) -> ComposeResult:
         marker = "›" if self.selected else " "
         yield Static(marker, id="approval-choice-marker", markup=False)
-        yield Static(f"{self.key}. {self.label}", id="approval-choice-label", markup=False)
+        yield Static(
+            f"{self.key}. {self.label}", id="approval-choice-label", markup=False
+        )
         yield Static(self.description, id="approval-choice-description", markup=False)
 
     def on_click(self, event) -> None:
@@ -92,10 +95,10 @@ class ApprovalChoice(Horizontal):
             parent.focus()
 
     def watch_selected(self, selected: bool) -> None:
-        try:
-            self.query_one("#approval-choice-marker", Static).update("›" if selected else " ")
-        except Exception:
-            pass
+        with suppress(Exception):
+            self.query_one("#approval-choice-marker", Static).update(
+                "›" if selected else " "
+            )
         self.set_class(selected, "selected")
 
     def set_selected(self, selected: bool) -> None:
@@ -188,15 +191,37 @@ class ApprovalRequest(Vertical, can_focus=True):
     """
 
     OPTIONS = [
-        {"key": "1", "label": "Approve", "description": "allow once", "action": "approve"},
-        {"key": "2", "label": "Always Approve", "description": "trust this tool", "action": "approve_all"},
-        {"key": "3", "label": "Reject", "description": "block execution", "action": "reject"},
-        {"key": "4", "label": "Cancel", "description": "reject and stop waiting", "action": "cancel"},
+        {
+            "key": "1",
+            "label": "Approve",
+            "description": "allow once",
+            "action": "approve",
+        },
+        {
+            "key": "2",
+            "label": "Always Approve",
+            "description": "trust this tool",
+            "action": "approve_all",
+        },
+        {
+            "key": "3",
+            "label": "Reject",
+            "description": "block execution",
+            "action": "reject",
+        },
+        {
+            "key": "4",
+            "label": "Cancel",
+            "description": "reject and stop waiting",
+            "action": "cancel",
+        },
     ]
 
     selected_index = reactive(0)
 
-    def __init__(self, interrupt_data: object, callback: Callable[[dict], None], **kwargs):
+    def __init__(
+        self, interrupt_data: object, callback: Callable[[dict], None], **kwargs
+    ):
         super().__init__(**kwargs)
         self.interrupt_data = interrupt_data
         self.callback = callback
@@ -214,7 +239,9 @@ class ApprovalRequest(Vertical, can_focus=True):
     def compose(self) -> ComposeResult:
         yield Static("Tool approval required", id="approval-title", markup=False)
         yield Static(self._summary_text(), id="approval-summary", markup=False)
-        yield Static(self._format_args(self.tool_args), id="approval-args", markup=False)
+        yield Static(
+            self._format_args(self.tool_args), id="approval-args", markup=False
+        )
         with Vertical(id="approval-options"):
             for index, option in enumerate(self.OPTIONS):
                 yield ApprovalChoice(
@@ -224,7 +251,11 @@ class ApprovalRequest(Vertical, can_focus=True):
                     description=option["description"],
                     selected=(index == self.selected_index),
                 )
-        yield Static("↑/↓ choose   Enter confirm   1-4 jump   Esc cancel", id="approval-help", markup=False)
+        yield Static(
+            "↑/↓ choose   Enter confirm   1-4 jump   Esc cancel",
+            id="approval-help",
+            markup=False,
+        )
 
     def _summary_text(self) -> str:
         if self.tool_name == "unknown":
@@ -294,8 +325,14 @@ class ApprovalRequest(Vertical, can_focus=True):
         self._resolve({"type": "approve"}, f"Approved {self._display_tool_name()}.")
 
     def _approve_all(self) -> None:
-        decision = {"type": "approve", "add_to_auto_approve": True, "tool_name": self.tool_name}
-        self._resolve(decision, f"Always approving {self._display_tool_name()} in this session.")
+        decision = {
+            "type": "approve",
+            "add_to_auto_approve": True,
+            "tool_name": self.tool_name,
+        }
+        self._resolve(
+            decision, f"Always approving {self._display_tool_name()} in this session."
+        )
 
     def _reject(self) -> None:
         decision = {"type": "reject", "message": "Action rejected by user"}
@@ -321,10 +358,10 @@ class ApprovalRequest(Vertical, can_focus=True):
             pass
 
         for selector in ("#approval-args", "#approval-options", "#approval-help"):
-            try:
+            with suppress(Exception):
                 self.query_one(selector).remove()
-            except Exception:
-                pass
 
     def _display_tool_name(self) -> str:
-        return self.tool_name if self.tool_name and self.tool_name != "unknown" else "tool"
+        return (
+            self.tool_name if self.tool_name and self.tool_name != "unknown" else "tool"
+        )

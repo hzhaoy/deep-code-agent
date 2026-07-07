@@ -27,6 +27,10 @@ addopts = "--cov=src/deep_code_agent --cov-report=term-missing --cov-fail-under=
 [tool.ruff]
 target-version = "py313"
 
+[tool.ruff.lint]
+ignore = ["E501"]
+select = ["B", "C4", "E", "F", "I", "SIM", "UP"]
+
 [tool.mypy]
 check_untyped_defs = true
 files = ["src/deep_code_agent"]

@@ -87,7 +87,9 @@ def extract_approval_tool_call(interrupt_data: Any) -> ApprovalToolCall:
                 )
 
     except Exception as exc:
-        return ApprovalToolCall(tool_name="error", tool_args={"error": str(exc), "debug": debug_data})
+        return ApprovalToolCall(
+            tool_name="error", tool_args={"error": str(exc), "debug": debug_data}
+        )
 
     return ApprovalToolCall(debug_data=debug_data)
 
@@ -101,8 +103,12 @@ def _unwrap_interrupt_value(interrupt_data: Any) -> Any:
             return item.get("value")
         return item
     if isinstance(interrupt_data, dict):
-        return interrupt_data.get("value") if "value" in interrupt_data else interrupt_data
-    if not isinstance(interrupt_data, (list, dict)) and hasattr(interrupt_data, "value"):
+        return (
+            interrupt_data.get("value") if "value" in interrupt_data else interrupt_data
+        )
+    if not isinstance(interrupt_data, (list, dict)) and hasattr(
+        interrupt_data, "value"
+    ):
         return interrupt_data.value
     return {}
 

@@ -15,7 +15,7 @@ def test_getattr_returns_create_code_agent():
 
 def test_getattr_raises_for_unknown_attribute():
     with pytest.raises(AttributeError, match="unknown"):
-        deep_code_agent.unknown
+        _ = deep_code_agent.unknown
 
 
 @patch("deep_code_agent.cli.main")

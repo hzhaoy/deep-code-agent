@@ -77,7 +77,9 @@ class StatusBar(Static):
         if self.status in self._status_classes:
             self.add_class(self.status)
 
-        label = self._status_labels.get(self.status, self.status.replace("_", " ").upper())
+        label = self._status_labels.get(
+            self.status, self.status.replace("_", " ").upper()
+        )
         message = self.message.strip()
         if message and message.lower() != label.lower():
             text = f"{label} [dim]({escape(message)})[/dim]"

@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from deep_code_agent import __version__
 from textual.reactive import reactive
 from textual.widgets import Static
+
+from deep_code_agent import __version__
 
 
 class SessionHeader(Static):
@@ -41,11 +42,21 @@ class SessionHeader(Static):
         self.update(self._render_header())
 
     def _render_header(self) -> str:
-        model = str(self.session_info.get("model") or self.session_info.get("model_name") or "deep-code-agent")
-        reasoning = str(self.session_info.get("reasoning") or self.session_info.get("effort") or "").strip()
+        model = str(
+            self.session_info.get("model")
+            or self.session_info.get("model_name")
+            or "deep-code-agent"
+        )
+        reasoning = str(
+            self.session_info.get("reasoning") or self.session_info.get("effort") or ""
+        ).strip()
         model_label = f"{model} {reasoning}".strip()
         directory = self._format_directory(
-            str(self.session_info.get("directory") or self.session_info.get("codebase_dir") or Path.cwd())
+            str(
+                self.session_info.get("directory")
+                or self.session_info.get("codebase_dir")
+                or Path.cwd()
+            )
         )
         version = str(self.session_info.get("version") or __version__)
 
@@ -70,7 +81,11 @@ class SessionHeader(Static):
         try:
             path = Path(directory).expanduser()
             home = Path.home()
-            display = "~/" + str(path.relative_to(home)) if path.is_relative_to(home) else str(path)
+            display = (
+                "~/" + str(path.relative_to(home))
+                if path.is_relative_to(home)
+                else str(path)
+            )
         except Exception:
             display = directory
 

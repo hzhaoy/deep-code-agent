@@ -51,10 +51,12 @@ def test_todos_card_update_replaces_rows():
             widget = TodosProgressCard([{"content": "Old", "status": "pending"}])
             await pilot.app.mount(widget)
 
-            widget.update_todos([
-                {"content": "New one", "status": "in_progress"},
-                {"content": "New two", "status": "completed"},
-            ])
+            widget.update_todos(
+                [
+                    {"content": "New one", "status": "in_progress"},
+                    {"content": "New two", "status": "completed"},
+                ]
+            )
             await pilot.pause()
 
             assert widget.todos == [

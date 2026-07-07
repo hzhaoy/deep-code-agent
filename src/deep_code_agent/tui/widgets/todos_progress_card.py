@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
+
 from textual import events
 from textual.containers import Vertical
 from textual.widgets import Static
-
 
 TodoItem = dict[str, str]
 
@@ -76,7 +77,9 @@ class TodosProgressCard(Vertical):
         "failed": "failed",
     }
 
-    def __init__(self, todos: list[TodoItem] | None = None, *, expanded: bool = True, **kwargs):
+    def __init__(
+        self, todos: list[TodoItem] | None = None, *, expanded: bool = True, **kwargs
+    ):
         super().__init__(**kwargs)
         self.todos = self._coerce_todos(todos or [])
         self.expanded = expanded
@@ -107,7 +110,7 @@ class TodosProgressCard(Vertical):
 
     def _header_text(self) -> str:
         marker = "Working" if self.expanded else "Plan"
-        counts = {status: 0 for status in self.STATUS_ICONS}
+        counts = dict.fromkeys(self.STATUS_ICONS, 0)
         for todo in self.todos:
             counts[todo["status"]] += 1
 
@@ -144,10 +147,8 @@ class TodosProgressCard(Vertical):
 
     def _remove_body(self) -> None:
         if self._body_container is not None:
-            try:
+            with suppress(Exception):
                 self._body_container.remove()
-            except Exception:
-                pass
             self._body_container = None
             return
 

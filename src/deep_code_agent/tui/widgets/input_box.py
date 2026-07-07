@@ -1,5 +1,6 @@
 """Input composer widget for user message entry."""
 
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,11 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Input, Static
 
-from deep_code_agent.tui.commands import SlashCommand, command_token, filter_slash_commands
+from deep_code_agent.tui.commands import (
+    SlashCommand,
+    command_token,
+    filter_slash_commands,
+)
 
 
 class ComposerInput(Input):
@@ -174,10 +179,8 @@ class InputBox(Vertical):
 
     def watch_session_info(self, session_info: dict) -> None:
         """Keep the bottom status line in sync with session metadata."""
-        try:
+        with suppress(Exception):
             self.query_one("#bottom-status", Static).update(self._status_text())
-        except Exception:
-            pass
 
     def action_submit(self) -> None:
         """Submit the prompt from the keyboard binding."""
@@ -327,7 +330,10 @@ class InputBox(Vertical):
 
     def _is_slash_command_input(self) -> bool:
         input_widget = self.query_one("#user-input", Input)
-        return self._history_index is None and command_token(input_widget.value) is not None
+        return (
+            self._history_index is None
+            and command_token(input_widget.value) is not None
+        )
 
     def _refresh_slash_command_menu(self, value: str) -> None:
         menu = self.query_one("#slash-command-menu", Static)
@@ -375,10 +381,20 @@ class InputBox(Vertical):
         menu.update("")
 
     def _status_text(self) -> str:
-        model = str(self.session_info.get("model") or self.session_info.get("model_name") or "deep-code-agent")
-        reasoning = str(self.session_info.get("reasoning") or self.session_info.get("effort") or "").strip()
+        model = str(
+            self.session_info.get("model")
+            or self.session_info.get("model_name")
+            or "deep-code-agent"
+        )
+        reasoning = str(
+            self.session_info.get("reasoning") or self.session_info.get("effort") or ""
+        ).strip()
         model_label = f"{model} {reasoning}".strip()
-        directory = str(self.session_info.get("directory") or self.session_info.get("codebase_dir") or Path.cwd())
+        directory = str(
+            self.session_info.get("directory")
+            or self.session_info.get("codebase_dir")
+            or Path.cwd()
+        )
         return (
             f"[#f6df9c]{escape(model_label)}[/]"
             f" [dim]·[/dim] [#91d18b]{escape(self._short_path(directory))}[/]"
@@ -388,7 +404,11 @@ class InputBox(Vertical):
         try:
             path = Path(directory).expanduser()
             home = Path.home()
-            display = "~/" + str(path.relative_to(home)) if path.is_relative_to(home) else str(path)
+            display = (
+                "~/" + str(path.relative_to(home))
+                if path.is_relative_to(home)
+                else str(path)
+            )
         except Exception:
             display = directory
         if len(display) <= 58:

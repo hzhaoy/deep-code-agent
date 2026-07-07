@@ -59,7 +59,9 @@ def test_tui_model_command_is_handled_locally():
             screen.on_input_box_user_input(InputBox.UserInput("/model"))
             await pilot.pause()
 
-            chat_text = "\n".join(str(getattr(child, "content", "")) for child in app._chat_log.children)
+            chat_text = "\n".join(
+                str(getattr(child, "content", "")) for child in app._chat_log.children
+            )
             assert "gpt-test" in chat_text
 
     asyncio.run(run_test())
@@ -91,7 +93,9 @@ def test_tui_help_command_renders_in_chat_log():
             screen.on_input_box_user_input(InputBox.UserInput("/help"))
             await pilot.pause()
 
-            chat_text = "\n".join(str(getattr(child, "content", "")) for child in app._chat_log.children)
+            chat_text = "\n".join(
+                str(getattr(child, "content", "")) for child in app._chat_log.children
+            )
             assert "Shortcuts:" in chat_text
             assert "/skills" in chat_text
             assert notifications == []
@@ -113,7 +117,11 @@ def test_tui_clear_is_ignored_while_approval_is_pending():
             chat_log = screen.get_chat_log()
             chat_log.add_user_message("before approval")
             approval = chat_log.add_approval_request(
-                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "terminal", "args": {"cmd": "pwd"}}}
+                    ]
+                },
                 callback=lambda decision: None,
             )
             await pilot.pause()
@@ -142,7 +150,11 @@ def test_tui_clear_removes_resolved_approval_requests():
 
             chat_log = screen.get_chat_log()
             approval = chat_log.add_approval_request(
-                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "terminal", "args": {"cmd": "pwd"}}}
+                    ]
+                },
                 callback=lambda decision: None,
             )
             await pilot.pause()
@@ -153,7 +165,9 @@ def test_tui_clear_removes_resolved_approval_requests():
             await pilot.pause()
 
             assert approval not in chat_log.children
-            chat_text = "\n".join(str(getattr(child, "content", "")) for child in chat_log.children)
+            chat_text = "\n".join(
+                str(getattr(child, "content", "")) for child in chat_log.children
+            )
             assert "Conversation cleared." in chat_text
 
     asyncio.run(run_test())

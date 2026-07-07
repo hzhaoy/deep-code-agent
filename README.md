@@ -205,6 +205,7 @@ Skills currently require `--backend-type filesystem`; the state backend does not
 Run the same checks used by CI before opening a pull request:
 
 ```bash
+uv run ruff format --check .
 uv run ruff check .
 uv run mypy
 uv run pytest

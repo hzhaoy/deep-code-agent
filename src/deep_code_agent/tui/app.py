@@ -66,7 +66,12 @@ class DeepCodeAgentApp(App):
         self.config = config or {"configurable": {"thread_id": "default"}}
         self.session_info = session_info or {}
         self.auto_approve_tools = []
-        self.debug_tool_calls = os.getenv("DEBUG_TOOL_CALLS", "0").strip().lower() in {"1", "true", "yes", "on"}
+        self.debug_tool_calls = os.getenv("DEBUG_TOOL_CALLS", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
 
         # Create bridge only when the agent is available. In TUI mode the agent
         # can be initialized lazily so the first screen renders immediately.
@@ -118,7 +123,11 @@ class DeepCodeAgentApp(App):
         if self._input_box is not None:
             self._input_box.set_disabled(True)
 
-        thread = threading.Thread(target=self._initialize_agent_in_thread, name="agent-initializer", daemon=True)
+        thread = threading.Thread(
+            target=self._initialize_agent_in_thread,
+            name="agent-initializer",
+            daemon=True,
+        )
         thread.start()
 
     def _initialize_agent_in_thread(self) -> None:
@@ -141,7 +150,9 @@ class DeepCodeAgentApp(App):
         if self._input_box is not None:
             self._input_box.set_disabled(False)
         if self._chat_log is not None:
-            self._chat_log.add_system_message("Agent initialized. Type your request below.")
+            self._chat_log.add_system_message(
+                "Agent initialized. Type your request below."
+            )
 
     def _handle_agent_initialization_error(self, exc: Exception) -> None:
         message = str(exc)

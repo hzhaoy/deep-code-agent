@@ -87,9 +87,15 @@ class SidePanel(Vertical):
 
         with Vertical(id="session-info", classes="panel-section"):
             yield Static("SESSION", classes="section-title", markup=False)
-            yield Static(self._model_text(), id="model-name", classes="kv-line", markup=False)
-            yield Static(self._session_text(), id="session-id", classes="kv-line", markup=False)
-            yield Static(self._dir_text(), id="codebase-dir", classes="kv-line", markup=False)
+            yield Static(
+                self._model_text(), id="model-name", classes="kv-line", markup=False
+            )
+            yield Static(
+                self._session_text(), id="session-id", classes="kv-line", markup=False
+            )
+            yield Static(
+                self._dir_text(), id="codebase-dir", classes="kv-line", markup=False
+            )
 
         with Vertical(id="tool-history", classes="panel-section"):
             yield Static("RECENT TOOLS", classes="section-title", markup=False)
@@ -119,7 +125,7 @@ class SidePanel(Vertical):
             candidate = f".../{parts[-1]}"
             if len(candidate) <= max_width:
                 return candidate
-        return f".../{text[-(max_width - 4):]}"
+        return f".../{text[-(max_width - 4) :]}"
 
     def _model_text(self) -> str:
         return f"Model: {self.session_info.get('model', 'Unknown')}"

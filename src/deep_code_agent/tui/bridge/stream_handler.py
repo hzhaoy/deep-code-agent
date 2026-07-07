@@ -1,9 +1,11 @@
 """Stream handler for processing LangGraph Agent output."""
 
 import json
+from collections.abc import AsyncIterator
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, AsyncIterator
+from typing import Any
 
 
 class EventType(Enum):
@@ -84,10 +86,8 @@ class StreamHandler:
             return {}
 
         if hasattr(args, "model_dump"):
-            try:
+            with suppress(Exception):
                 args = args.model_dump()
-            except Exception:
-                pass
 
         if isinstance(args, dict):
             return args
@@ -106,7 +106,9 @@ class StreamHandler:
 
         return {"value": args}
 
-    def _tool_call_signature(self, tool_id: str, tool_name: str, tool_args: dict) -> tuple[str, str, str]:
+    def _tool_call_signature(
+        self, tool_id: str, tool_name: str, tool_args: dict
+    ) -> tuple[str, str, str]:
         try:
             args_signature = json.dumps(tool_args, sort_keys=True, default=str)
         except TypeError:
@@ -141,10 +143,8 @@ class StreamHandler:
 
         for item in getattr(token, "tool_call_chunks", None) or []:
             if hasattr(item, "model_dump"):
-                try:
+                with suppress(Exception):
                     item = item.model_dump()
-                except Exception:
-                    pass
             if isinstance(item, dict):
                 add_chunk(item)
 
@@ -159,7 +159,9 @@ class StreamHandler:
                     {
                         "id": item.get("id"),
                         "name": item.get("name") or function.get("name"),
-                        "args": item.get("args") if "args" in item else function.get("arguments"),
+                        "args": item.get("args")
+                        if "args" in item
+                        else function.get("arguments"),
                         "index": item.get("index"),
                         "type": item.get("type"),
                     }
@@ -167,10 +169,8 @@ class StreamHandler:
 
         for item in getattr(token, "content_blocks", None) or []:
             if hasattr(item, "model_dump"):
-                try:
+                with suppress(Exception):
                     item = item.model_dump()
-                except Exception:
-                    pass
             if not isinstance(item, dict):
                 continue
             block_type = str(item.get("type", ""))
@@ -180,7 +180,9 @@ class StreamHandler:
                 {
                     "id": item.get("id"),
                     "name": item.get("name"),
-                    "args": item.get("args") if "args" in item else item.get("arguments"),
+                    "args": item.get("args")
+                    if "args" in item
+                    else item.get("arguments"),
                     "index": item.get("index"),
                     "type": item.get("type"),
                 }
@@ -188,7 +190,9 @@ class StreamHandler:
 
         return chunks
 
-    def _args_from_tool_call_chunks(self, tool_id: str, tool_name: str, chunks: list[dict]) -> dict:
+    def _args_from_tool_call_chunks(
+        self, tool_id: str, tool_name: str, chunks: list[dict]
+    ) -> dict:
         for chunk in chunks:
             chunk_id = chunk.get("id")
             chunk_name = chunk.get("name")
@@ -215,12 +219,17 @@ class StreamHandler:
             combined = f"{accumulated}{fragment}"
             self._tool_arg_fragments[tool_id] = combined
             combined_args = self._coerce_tool_args(combined)
-            if not (set(combined_args) == {"arguments"} and isinstance(combined_args.get("arguments"), str)):
+            if not (
+                set(combined_args) == {"arguments"}
+                and isinstance(combined_args.get("arguments"), str)
+            ):
                 return combined_args
 
         return {}
 
-    def _tool_call_debug_metadata(self, token: Any, tool_call_chunks: list[dict], tc_preview: Any) -> dict:
+    def _tool_call_debug_metadata(
+        self, token: Any, tool_call_chunks: list[dict], tc_preview: Any
+    ) -> dict:
         debug_candidates = {
             "token.type": type(token).__name__,
             "token.name": getattr(token, "name", None),
@@ -228,10 +237,14 @@ class StreamHandler:
         }
         additional_kwargs = getattr(token, "additional_kwargs", None)
         if isinstance(additional_kwargs, dict):
-            debug_candidates["token.additional_kwargs.keys"] = list(additional_kwargs.keys())[:20]
+            debug_candidates["token.additional_kwargs.keys"] = list(
+                additional_kwargs.keys()
+            )[:20]
         return {"debug_tool_call": debug_candidates, "debug_tc_preview": tc_preview}
 
-    def _remember_tool_call(self, tool_id: str, tool_name: str, chunks: list[dict] | None = None) -> None:
+    def _remember_tool_call(
+        self, tool_id: str, tool_name: str, chunks: list[dict] | None = None
+    ) -> None:
         self._tool_names_by_id[tool_id] = tool_name
         for chunk in chunks or []:
             chunk_index = chunk.get("index")
@@ -240,18 +253,20 @@ class StreamHandler:
             if chunk.get("id") == tool_id:
                 self._tool_ids_by_index[chunk_index] = tool_id
 
-    def _normalize_tool_call(self, tc: Any, *, fallback_name: str | None = None) -> dict | None:
+    def _normalize_tool_call(
+        self, tc: Any, *, fallback_name: str | None = None
+    ) -> dict | None:
         """Normalize a tool call from dict/object/update snapshot shapes."""
         if hasattr(tc, "model_dump"):
-            try:
+            with suppress(Exception):
                 tc = tc.model_dump()
-            except Exception:
-                pass
 
         if isinstance(tc, dict):
             function_value = tc.get("function")
             function = function_value if isinstance(function_value, dict) else {}
-            tool_name = tc.get("name") or tc.get("tool_name") or function.get("name") or ""
+            tool_name = (
+                tc.get("name") or tc.get("tool_name") or function.get("name") or ""
+            )
             raw_args = tc.get("args") if "args" in tc else function.get("arguments")
             tool_args = self._coerce_tool_args(raw_args)
             tool_id = tc.get("id") or tc.get("tool_call_id") or ""
@@ -278,10 +293,8 @@ class StreamHandler:
             return []
 
         if hasattr(chunk, "model_dump"):
-            try:
+            with suppress(Exception):
                 chunk = chunk.model_dump()
-            except Exception:
-                pass
 
         found: list[dict] = []
         if isinstance(chunk, dict):
@@ -294,11 +307,15 @@ class StreamHandler:
                             found.append(normalized)
 
             for value in chunk.values():
-                found.extend(self._find_tool_calls_payload(value, max_depth=max_depth - 1))
+                found.extend(
+                    self._find_tool_calls_payload(value, max_depth=max_depth - 1)
+                )
 
         elif isinstance(chunk, list):
             for item in chunk:
-                found.extend(self._find_tool_calls_payload(item, max_depth=max_depth - 1))
+                found.extend(
+                    self._find_tool_calls_payload(item, max_depth=max_depth - 1)
+                )
 
         else:
             calls = getattr(chunk, "tool_calls", None)
@@ -311,14 +328,18 @@ class StreamHandler:
         deduped: list[dict] = []
         seen: set[tuple[str, str, str]] = set()
         for call in found:
-            signature = self._tool_call_signature(call["id"], call["name"], call["args"])
+            signature = self._tool_call_signature(
+                call["id"], call["name"], call["args"]
+            )
             if signature in seen:
                 continue
             seen.add(signature)
             deduped.append(call)
         return deduped
 
-    def _emit_tool_call_event(self, tool_call: dict, *, metadata: dict | None = None) -> AgentEvent | None:
+    def _emit_tool_call_event(
+        self, tool_call: dict, *, metadata: dict | None = None
+    ) -> AgentEvent | None:
         tool_id = tool_call["id"]
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
@@ -343,10 +364,8 @@ class StreamHandler:
         not break the TUI.
         """
         if hasattr(item, "model_dump"):
-            try:
+            with suppress(Exception):
                 item = item.model_dump()
-            except Exception:
-                pass
 
         if isinstance(item, dict):
             content = item.get("content")
@@ -377,16 +396,16 @@ class StreamHandler:
                 normalized.append(todo)
         return normalized
 
-    def _find_todos_payload(self, chunk: Any, *, max_depth: int = 4) -> list[dict[str, str]]:
+    def _find_todos_payload(
+        self, chunk: Any, *, max_depth: int = 4
+    ) -> list[dict[str, str]]:
         """Find and normalize the first valid ``todos`` payload in an update chunk."""
         if max_depth < 0:
             return []
 
         if hasattr(chunk, "model_dump"):
-            try:
+            with suppress(Exception):
                 chunk = chunk.model_dump()
-            except Exception:
-                pass
 
         if isinstance(chunk, dict):
             if "todos" in chunk:
@@ -407,7 +426,9 @@ class StreamHandler:
 
         return []
 
-    async def _process_stream(self, stream, include_tool_calls: bool = True) -> AsyncIterator[AgentEvent]:
+    async def _process_stream(
+        self, stream, include_tool_calls: bool = True
+    ) -> AsyncIterator[AgentEvent]:
         """Process the agent stream and yield events.
 
         Args:
@@ -423,9 +444,15 @@ class StreamHandler:
                 tool_call_chunks = self._iter_tool_call_chunks(token)
 
                 # Check for tool calls in the message
-                if include_tool_calls and hasattr(token, "tool_calls") and token.tool_calls:
+                if (
+                    include_tool_calls
+                    and hasattr(token, "tool_calls")
+                    and token.tool_calls
+                ):
                     for tc in token.tool_calls:
-                        tool_call = self._normalize_tool_call(tc, fallback_name=getattr(token, "name", None))
+                        tool_call = self._normalize_tool_call(
+                            tc, fallback_name=getattr(token, "name", None)
+                        )
                         if tool_call is None:
                             continue
                         tool_id = tool_call["id"]
@@ -444,7 +471,9 @@ class StreamHandler:
                         self._message_chunks.clear()
                         self._remember_tool_call(tool_id, tool_name, tool_call_chunks)
                         if not tool_args:
-                            tool_args = self._args_from_tool_call_chunks(tool_id, tool_name, tool_call_chunks)
+                            tool_args = self._args_from_tool_call_chunks(
+                                tool_id, tool_name, tool_call_chunks
+                            )
 
                         debug_candidates: dict = {}
                         if isinstance(tc, dict):
@@ -473,8 +502,15 @@ class StreamHandler:
                                     "token.name": getattr(token, "name", None),
                                     "token.tool_call_chunks": tool_call_chunks[:3],
                                     "token.additional_kwargs.keys": (
-                                        list(getattr(token, "additional_kwargs", {}).keys())[:20]
-                                        if isinstance(getattr(token, "additional_kwargs", None), dict)
+                                        list(
+                                            getattr(
+                                                token, "additional_kwargs", {}
+                                            ).keys()
+                                        )[:20]
+                                        if isinstance(
+                                            getattr(token, "additional_kwargs", None),
+                                            dict,
+                                        )
                                         else None
                                     ),
                                 },
@@ -496,7 +532,9 @@ class StreamHandler:
                             continue
                         self._message_chunks.clear()
 
-                        tool_name = tool_chunk.get("name") or self._tool_names_by_id.get(tool_id, "")
+                        tool_name = tool_chunk.get(
+                            "name"
+                        ) or self._tool_names_by_id.get(tool_id, "")
                         tool_name = str(tool_name).strip()
                         if not tool_name:
                             continue
@@ -504,41 +542,62 @@ class StreamHandler:
                         if isinstance(chunk_index, int):
                             self._tool_ids_by_index[chunk_index] = tool_id
 
-                        tool_args = self._args_from_tool_call_chunks(tool_id, tool_name, [tool_chunk])
+                        tool_args = self._args_from_tool_call_chunks(
+                            tool_id, tool_name, [tool_chunk]
+                        )
                         if not tool_args:
                             continue
 
                         event = self._emit_tool_call_event(
                             {"name": tool_name, "args": tool_args, "id": tool_id},
-                            metadata=self._tool_call_debug_metadata(token, [tool_chunk], tool_chunk),
+                            metadata=self._tool_call_debug_metadata(
+                                token, [tool_chunk], tool_chunk
+                            ),
                         )
                         if event is not None:
                             yield event
 
                 # Check for tool execution results (ToolMessage)
-                if include_tool_calls and hasattr(token, "name") and hasattr(token, "content"):
+                if (
+                    include_tool_calls
+                    and hasattr(token, "name")
+                    and hasattr(token, "content")
+                ):
                     # This is a ToolMessage - it's result of tool execution
                     from langchain_core.messages import ToolMessage
 
                     if isinstance(token, ToolMessage):
                         self._message_chunks.clear()
-                        content_str = str(token.content) if token.content is not None else "(empty result)"
+                        content_str = (
+                            str(token.content)
+                            if token.content is not None
+                            else "(empty result)"
+                        )
                         if not content_str.strip():
                             content_str = "(empty result)"
                         status = getattr(token, "status", None)
                         is_error = status == "error"
 
                         yield AgentEvent(
-                            type=EventType.TOOL_SUCCESS if not is_error else EventType.TOOL_ERROR,
+                            type=EventType.TOOL_SUCCESS
+                            if not is_error
+                            else EventType.TOOL_ERROR,
                             data=content_str,
-                            metadata={"tool_name": token.name, "tool_call_id": token.tool_call_id},
+                            metadata={
+                                "tool_name": token.name,
+                                "tool_call_id": token.tool_call_id,
+                            },
                         )
                         continue  # Don't process ToolMessage as regular message content
 
                 # Process message content chunks
                 if token.content:
                     self._message_chunks.append(str(token.content))
-                    yield AgentEvent(type=EventType.MESSAGE_CHUNK, data=str(token.content), metadata=metadata)
+                    yield AgentEvent(
+                        type=EventType.MESSAGE_CHUNK,
+                        data=str(token.content),
+                        metadata=metadata,
+                    )
 
             elif mode == "updates":
                 # Check for interrupt
@@ -594,7 +653,9 @@ class StreamHandler:
 
             # Stream complete
             if self._message_chunks:
-                yield AgentEvent(type=EventType.MESSAGE_COMPLETE, data="".join(self._message_chunks))
+                yield AgentEvent(
+                    type=EventType.MESSAGE_COMPLETE, data="".join(self._message_chunks)
+                )
 
             yield AgentEvent(type=EventType.DONE)
 
@@ -616,12 +677,7 @@ class StreamHandler:
 
         try:
             # Handle both single decision and multiple decisions
-            if "decisions" in decision:
-                # Multiple decisions provided
-                decisions = decision["decisions"]
-            else:
-                # Single decision - wrap in list
-                decisions = [decision]
+            decisions = decision.get("decisions", [decision])
 
             stream = self.agent.astream(
                 Command(resume={"decisions": decisions}),
@@ -633,7 +689,9 @@ class StreamHandler:
                 yield event
 
             if self._message_chunks:
-                yield AgentEvent(type=EventType.MESSAGE_COMPLETE, data="".join(self._message_chunks))
+                yield AgentEvent(
+                    type=EventType.MESSAGE_COMPLETE, data="".join(self._message_chunks)
+                )
 
             yield AgentEvent(type=EventType.DONE)
 

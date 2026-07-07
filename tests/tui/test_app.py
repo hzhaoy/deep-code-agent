@@ -13,9 +13,9 @@ def test_app_auto_approve_tools():
     app = DeepCodeAgentApp(agent=MockAgent())
 
     # Should have auto_approve_tools attribute
-    assert hasattr(app, 'auto_approve_tools')
+    assert hasattr(app, "auto_approve_tools")
     assert app.auto_approve_tools == []
 
     # Should be reactive
-    app.auto_approve_tools = ['read_file']
-    assert 'read_file' in app.auto_approve_tools
+    app.auto_approve_tools = ["read_file"]
+    assert "read_file" in app.auto_approve_tools

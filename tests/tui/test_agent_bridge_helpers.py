@@ -125,12 +125,26 @@ def test_agent_bridge_starts_new_bubble_after_tool_call():
     app = FakeApp()
     bridge = AgentBridge(agent=object(), app=app)
 
-    asyncio.run(bridge._dispatch_event(AgentEvent(type=EventType.MESSAGE_CHUNK, data="Before tools.")))
     asyncio.run(
         bridge._dispatch_event(
-            AgentEvent(type=EventType.TOOL_CALL, data={"name": "ls", "args": {}, "id": "call_1"})
+            AgentEvent(type=EventType.MESSAGE_CHUNK, data="Before tools.")
         )
     )
-    asyncio.run(bridge._dispatch_event(AgentEvent(type=EventType.MESSAGE_CHUNK, data="After tools.")))
+    asyncio.run(
+        bridge._dispatch_event(
+            AgentEvent(
+                type=EventType.TOOL_CALL,
+                data={"name": "ls", "args": {}, "id": "call_1"},
+            )
+        )
+    )
+    asyncio.run(
+        bridge._dispatch_event(
+            AgentEvent(type=EventType.MESSAGE_CHUNK, data="After tools.")
+        )
+    )
 
-    assert [message.content for message in app._chat_log.messages] == ["Before tools.", "After tools."]
+    assert [message.content for message in app._chat_log.messages] == [
+        "Before tools.",
+        "After tools.",
+    ]
