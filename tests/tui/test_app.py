@@ -1,8 +1,5 @@
 """Tests for DeepCodeAgentApp."""
 
-import pytest
-from textual.app import App
-
 
 def test_app_auto_approve_tools():
     """Test that app has auto_approve_tools configuration."""

@@ -200,6 +200,16 @@ uv run deep-code-agent --backend-type filesystem --skills-dir .agents/skills
 
 Skills currently require `--backend-type filesystem`; the state backend does not load local skill directories.
 
+## Development Checks
+
+Run the same checks used by CI before opening a pull request:
+
+```bash
+uv run ruff check .
+uv run mypy
+uv run pytest
+```
+
 ### Working with Subagents
 
 The Deep Code Agent includes specialized subagents that can be used independently or as part of the main workflow:

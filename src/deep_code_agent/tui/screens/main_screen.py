@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
@@ -115,8 +116,6 @@ class MainScreen(Screen):
             self.get_input_box().session_info = session_info
         except Exception:
             pass
-
-    from textual import work
 
     @work(exclusive=True, name="agent_request")
     async def process_agent_request(self, content: str) -> None:

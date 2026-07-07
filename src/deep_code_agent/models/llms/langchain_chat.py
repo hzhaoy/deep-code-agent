@@ -11,7 +11,7 @@ def create_chat_model(
     base_url: str | None = None,
 ):
     model_name = model_name or os.getenv("MODEL_NAME")
-    api_key = api_key or os.getenv("OPENAI_API_KEY", "EMPTY")
+    api_key = api_key or os.getenv("OPENAI_API_KEY") or "EMPTY"
     base_url = base_url or os.getenv("OPENAI_API_BASE")
     return init_chat_model(
         model=model_name,

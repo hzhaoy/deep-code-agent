@@ -24,10 +24,22 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 addopts = "--cov=src/deep_code_agent --cov-report=term-missing --cov-fail-under=40"
 
+[tool.ruff]
+target-version = "py313"
+
+[tool.mypy]
+check_untyped_defs = true
+files = ["src/deep_code_agent"]
+python_version = "3.13"
+show_error_codes = true
+warn_unused_configs = true
+
 [dependency-groups]
 dev = [
     "ipython>=9.8.0",
     "langgraph-cli[inmem]>=0.4.9",
+    "mypy>=2.1.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.1.0",
+    "ruff>=0.15.20",
 ]

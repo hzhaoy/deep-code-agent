@@ -1,6 +1,4 @@
 """Tests for ToolCallView widget."""
-
-import pytest
 from textual.app import App
 
 

@@ -40,8 +40,8 @@ class DeepCodeAgentApp(App):
 
     # Reactive state
     dark = reactive(True)
-    session_info = reactive({})
-    auto_approve_tools = reactive([])
+    session_info: reactive[dict[str, Any]] = reactive({})
+    auto_approve_tools: reactive[list[str]] = reactive(list)
 
     def __init__(
         self,
