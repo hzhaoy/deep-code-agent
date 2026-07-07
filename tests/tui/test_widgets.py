@@ -206,6 +206,111 @@ def test_input_box_arrow_navigation_wraps_slash_commands():
     asyncio.run(run_test())
 
 
+def test_input_box_arrow_navigation_recalls_input_history():
+    """Up and Down should navigate submitted prompts when not completing slash commands."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.input_box import InputBox
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            widget = InputBox()
+            await pilot.app.mount(widget)
+            await pilot.pause()
+
+            input_widget = widget.query_one("#user-input", Input)
+            input_widget.focus()
+
+            input_widget.value = "first prompt"
+            widget._submit_input()
+            input_widget.value = "second prompt"
+            widget._submit_input()
+            await pilot.pause()
+
+            await pilot.press("up")
+            await pilot.pause()
+            assert input_widget.value == "second prompt"
+            assert input_widget.cursor_position == len("second prompt")
+
+            await pilot.press("up")
+            await pilot.pause()
+            assert input_widget.value == "first prompt"
+
+            await pilot.press("down")
+            await pilot.pause()
+            assert input_widget.value == "second prompt"
+
+            await pilot.press("down")
+            await pilot.pause()
+            assert input_widget.value == ""
+
+    asyncio.run(run_test())
+
+
+def test_input_box_history_navigation_restores_current_draft():
+    """Returning past the newest history item should restore the unsent draft."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.input_box import InputBox
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            widget = InputBox()
+            await pilot.app.mount(widget)
+            await pilot.pause()
+
+            input_widget = widget.query_one("#user-input", Input)
+            input_widget.focus()
+
+            input_widget.value = "sent prompt"
+            widget._submit_input()
+            input_widget.value = "unsent draft"
+            await pilot.pause()
+
+            await pilot.press("up")
+            await pilot.pause()
+            assert input_widget.value == "sent prompt"
+
+            await pilot.press("down")
+            await pilot.pause()
+            assert input_widget.value == "unsent draft"
+            assert input_widget.cursor_position == len("unsent draft")
+
+    asyncio.run(run_test())
+
+
+def test_input_box_history_navigation_continues_past_slash_command_entries():
+    """History navigation should not switch to slash completion after recalling a command."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.input_box import InputBox
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            widget = InputBox()
+            await pilot.app.mount(widget)
+            await pilot.pause()
+
+            input_widget = widget.query_one("#user-input", Input)
+            input_widget.focus()
+
+            input_widget.value = "older prompt"
+            widget._submit_input()
+            input_widget.value = "/help"
+            widget._submit_input()
+            await pilot.pause()
+
+            await pilot.press("up")
+            await pilot.pause()
+            assert input_widget.value == "/help"
+
+            await pilot.press("up")
+            await pilot.pause()
+            assert input_widget.value == "older prompt"
+
+    asyncio.run(run_test())
+
+
 def test_side_panel_compacts_long_codebase_path():
     """Long paths should not overwhelm the sidebar."""
     from deep_code_agent.tui.widgets.side_panel import SidePanel
@@ -275,6 +380,32 @@ def test_chat_log_adds_inline_approval_request():
 
             assert isinstance(widget, ApprovalRequest)
             assert widget in chat_log.children
+
+    asyncio.run(run_test())
+
+
+def test_chat_log_tracks_pending_approval_requests():
+    """Only unresolved approval cards should block transcript clearing."""
+    import asyncio
+
+    from deep_code_agent.tui.widgets.chat_log import ChatLog
+
+    async def run_test():
+        async with App().run_test() as pilot:
+            chat_log = ChatLog()
+            await pilot.app.mount(chat_log)
+            await pilot.pause()
+
+            widget = chat_log.add_approval_request(
+                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                callback=lambda decision: None,
+            )
+            await pilot.pause()
+
+            assert chat_log.has_pending_approval_request()
+            widget.action_confirm_selection()
+            await pilot.pause()
+            assert not chat_log.has_pending_approval_request()
 
     asyncio.run(run_test())
 

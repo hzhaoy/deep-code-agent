@@ -97,3 +97,63 @@ def test_tui_help_command_renders_in_chat_log():
             assert notifications == []
 
     asyncio.run(run_test())
+
+
+def test_tui_clear_is_ignored_while_approval_is_pending():
+    """Clearing the transcript must not remove the active approval callback holder."""
+    from deep_code_agent.tui.app import DeepCodeAgentApp
+
+    async def run_test():
+        app = DeepCodeAgentApp(agent=object())
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            screen = app._main_screen
+            assert screen is not None
+
+            chat_log = screen.get_chat_log()
+            chat_log.add_user_message("before approval")
+            approval = chat_log.add_approval_request(
+                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                callback=lambda decision: None,
+            )
+            await pilot.pause()
+
+            children_before_clear = list(chat_log.children)
+            screen.action_clear_chat()
+            await pilot.pause()
+
+            assert list(chat_log.children) == children_before_clear
+            assert approval in chat_log.children
+            assert screen.get_status_bar().status == "waiting_approval"
+
+    asyncio.run(run_test())
+
+
+def test_tui_clear_removes_resolved_approval_requests():
+    """Resolved approval cards are normal transcript content and can be cleared."""
+    from deep_code_agent.tui.app import DeepCodeAgentApp
+
+    async def run_test():
+        app = DeepCodeAgentApp(agent=object())
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            screen = app._main_screen
+            assert screen is not None
+
+            chat_log = screen.get_chat_log()
+            approval = chat_log.add_approval_request(
+                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                callback=lambda decision: None,
+            )
+            await pilot.pause()
+
+            approval.action_confirm_selection()
+            await pilot.pause()
+            screen.action_clear_chat()
+            await pilot.pause()
+
+            assert approval not in chat_log.children
+            chat_text = "\n".join(str(getattr(child, "content", "")) for child in chat_log.children)
+            assert "Conversation cleared." in chat_text
+
+    asyncio.run(run_test())
