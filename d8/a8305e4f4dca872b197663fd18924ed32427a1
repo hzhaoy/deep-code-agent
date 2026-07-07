@@ -1,0 +1,85 @@
+.github/workflows/pr-check.yml
+  s_360f6511af2f2b::t_cd09ffea442a18 28-30
+README.md
+  s_360f6511af2f2b::t_ed701472658ec5 208
+pyproject.toml
+  s_360f6511af2f2b::t_44044dea105796 30-33
+src/deep_code_agent/cli.py
+  s_360f6511af2f2b::t_2f46efd257ae26 27-30,51,59-62,79-81,153-155,214-225,231-233,313,315,351
+src/deep_code_agent/code_agent.py
+  s_360f6511af2f2b::t_44d4d1ed01b4ea 60-62
+src/deep_code_agent/tui/app.py
+  s_360f6511af2f2b::t_d9485a93405c48 69-74,126-130,153-155
+src/deep_code_agent/tui/bridge/agent_bridge.py
+  s_360f6511af2f2b::t_ee77d61a7ee561 16,31,84-87,100-102,114-118,124-128,158-160,172-175,187-189,244,361-363,365-367,396-398,405-409,422-424,427-429,445-447,468-475,495-498,501-505,517-524,544-547,550-554,573-575,585-589,601-607,616-618,620-622,633-638,652-656
+src/deep_code_agent/tui/bridge/stream_handler.py
+  s_360f6511af2f2b::t_df494700119048 4-5,8,89,109-111,146,162-164,172,183-185,193-195,222-225,230-232,240-242,245-247,256-258,261,267-269,296,310-312,316-318,331-333,340-342,367,399-401,407,429-431,447-451,453-455,474-476,505-513,535-537,545-547,553-555,561-565,571-575,582-584,586-589,596-600,656-658,680,692-694
+src/deep_code_agent/tui/commands.py
+  s_360f6511af2f2b::t_8392addf064d4f 22-24,28-30
+src/deep_code_agent/tui/screens/main_screen.py
+  s_360f6511af2f2b::t_9c40c29d9b4e4d 5,83-85,110,112,114,167,169,171,175-177,193-195,201-205
+src/deep_code_agent/tui/utils/approval.py
+  s_360f6511af2f2b::t_f5e9db3c6cf1ca 90-92,106-111
+src/deep_code_agent/tui/widgets/approval_request.py
+  s_360f6511af2f2b::t_a6523b1834562e 7,84-86,98-101,194-217,222-224,242-244,254-258,328-335,361,365-367
+src/deep_code_agent/tui/widgets/chat_log.py
+  s_360f6511af2f2b::t_8b961c1bf81c62 3-4,62,139,155,201
+src/deep_code_agent/tui/widgets/input_box.py
+  s_360f6511af2f2b::t_e9687233016bb4 3,14-18,182,333-336,384-391,393-397,407-411
+src/deep_code_agent/tui/widgets/session_header.py
+  s_360f6511af2f2b::t_b4a2c30ccec841 11-12,45-52,55-59,84-88
+src/deep_code_agent/tui/widgets/side_panel.py
+  s_360f6511af2f2b::t_3cf6aef39c140b 90-98,128
+src/deep_code_agent/tui/widgets/status_bar.py
+  s_360f6511af2f2b::t_a61f6ba59eb98b 80-82
+src/deep_code_agent/tui/widgets/todos_progress_card.py
+  s_360f6511af2f2b::t_f32abf9e0d411f 5-6,80-82,113,150
+src/deep_code_agent/tui/widgets/tool_call_view.py
+  s_360f6511af2f2b::t_94eb1df65d0ab0 90,118-120,148-152,206-208
+tests/test_cli.py
+  s_360f6511af2f2b::t_029b040f0d7b31 14-18,51-54,87-90,92-95,103-105,152-154,159-161,180-183,189-191
+tests/test_code_agent.py
+  s_360f6511af2f2b::t_685554180dafc4 194-199,237-239
+tests/test_interrupt_handling.py
+  s_360f6511af2f2b::t_09959e381df769 92-95,108-110,113-116,122-124,131-140,148-150,152-155,161-163
+tests/test_package_entrypoints.py
+  s_360f6511af2f2b::t_33455d83d9d513 18
+tests/test_prompts.py
+  s_360f6511af2f2b::t_76284cacdbcbc2 16-19
+tests/test_terminal.py
+  s_360f6511af2f2b::t_21dbc21430acbb 23-26,30-33,41-43
+tests/tui/test_agent_bridge_helpers.py
+  s_360f6511af2f2b::t_9b9f10b623ee6a 130-143,147-150
+tests/tui/test_app.py
+  s_360f6511af2f2b::t_04bea012fb6ff1 16,20-21
+tests/tui/test_chat_log_todos.py
+  s_360f6511af2f2b::t_08b3fc816917b0 17-22,25-34,49-51,63-65,82-84,87-89,105-107
+tests/tui/test_main_screen_commands.py
+  s_360f6511af2f2b::t_9ccebb14d691c9 62-64,96-98,120-124,153-157,168-170
+tests/tui/test_stream_handler.py
+  s_360f6511af2f2b::t_39434c57c94c52 49,54-57,75-77,97-99,109-116,163-167,198-200,223-227,235-237,267-269,271-276,284-289,301-305,313-315,317-322,349-355,357-359,385-389,397-399,401-407,415-420,432-436,444-446,448-454,481-485,492-496,508-519,531-535,547-561,572-576
+tests/tui/test_todos_progress_card.py
+  s_360f6511af2f2b::t_358176c9765072 54-59
+tests/tui/test_tool_call_view.py
+  s_360f6511af2f2b::t_e4c8d24e01f08f 2,13,25,40
+tests/tui/test_widgets.py
+  s_360f6511af2f2b::t_e92c29a1816d7a 318-320,341-344,381-385,409-413,439-443,461-464,470-474
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "d8a8305e4f4dca872b197663fd18924ed32427a1",
+  "prompts": {},
+  "sessions": {
+    "s_360f6511af2f2b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f380e-c2b1-79e3-96a9-facb2a757c75",
+        "model": "unknown"
+      },
+      "human_author": "hzhaoy <hzywong@gmail.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
