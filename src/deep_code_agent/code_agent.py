@@ -57,7 +57,9 @@ def create_code_agent(
     """
     path = Path(codebase_dir)
     if backend_type == "state" and skills:
-        raise ValueError("Skills require filesystem backend; use backend_type='filesystem'.")
+        raise ValueError(
+            "Skills require filesystem backend; use backend_type='filesystem'."
+        )
 
     if backend_type == "filesystem" and not path.exists():
         path.mkdir(parents=True, exist_ok=True)

@@ -13,7 +13,7 @@ from deep_code_agent.tui.bridge.stream_handler import (
 )
 
 if TYPE_CHECKING:
-    from textual.app import App
+    from deep_code_agent.tui.app import DeepCodeAgentApp
 
 
 class AgentBridge:
@@ -28,7 +28,7 @@ class AgentBridge:
         await bridge.process_request("Hello!")
     """
 
-    def __init__(self, agent: Any, app: App | None = None):
+    def __init__(self, agent: Any, app: DeepCodeAgentApp | None = None):
         """Initialize the bridge.
 
         Args:
@@ -81,8 +81,10 @@ class AgentBridge:
                     value = item
             elif isinstance(interrupt_data, dict):
                 value = interrupt_data
-            elif not isinstance(interrupt_data, (list, dict)) and hasattr(interrupt_data, "value"):
-                value = getattr(interrupt_data, "value")
+            elif not isinstance(interrupt_data, (list, dict)) and hasattr(
+                interrupt_data, "value"
+            ):
+                value = interrupt_data.value
             else:
                 return "unknown"
 
@@ -95,7 +97,9 @@ class AgentBridge:
             if action_requests:
                 action = action_requests[0]
                 action_data = action.action if hasattr(action, "action") else action
-                if isinstance(action_data, dict) and isinstance(action_data.get("action"), dict):
+                if isinstance(action_data, dict) and isinstance(
+                    action_data.get("action"), dict
+                ):
                     action_data = action_data["action"]
                 if hasattr(action_data, "model_dump"):
                     action_data = action_data.model_dump()
@@ -107,13 +111,21 @@ class AgentBridge:
             tool_calls = value.get("tool_calls", [])
             if tool_calls:
                 tc = tool_calls[0]
-                tc_data = tc if isinstance(tc, dict) else getattr(tc, "model_dump", lambda: {})()
+                tc_data = (
+                    tc
+                    if isinstance(tc, dict)
+                    else getattr(tc, "model_dump", lambda: {})()
+                )
                 return tc_data.get("name", "unknown")
 
             # Path 3: Check for nested "action" key at top level
             if "action" in value:
                 action = value["action"]
-                action_data = action if isinstance(action, dict) else getattr(action, "model_dump", lambda: {})()
+                action_data = (
+                    action
+                    if isinstance(action, dict)
+                    else getattr(action, "model_dump", lambda: {})()
+                )
                 return action_data.get("name", "unknown")
 
             # Path 4: Look in messages for tool calls
@@ -143,7 +155,9 @@ class AgentBridge:
             return "unknown"
         return "unknown"
 
-    def _extract_action_requests_from_interrupt(self, interrupt_data: Any) -> list[dict]:
+    def _extract_action_requests_from_interrupt(
+        self, interrupt_data: Any
+    ) -> list[dict]:
         try:
             if isinstance(interrupt_data, (list, tuple)) and interrupt_data:
                 item = interrupt_data[0]
@@ -155,8 +169,10 @@ class AgentBridge:
                     value = item
             elif isinstance(interrupt_data, dict):
                 value = interrupt_data
-            elif not isinstance(interrupt_data, (list, dict)) and hasattr(interrupt_data, "value"):
-                value = getattr(interrupt_data, "value")
+            elif not isinstance(interrupt_data, (list, dict)) and hasattr(
+                interrupt_data, "value"
+            ):
+                value = interrupt_data.value
             else:
                 return []
 
@@ -168,7 +184,9 @@ class AgentBridge:
                 out: list[dict] = []
                 for ar in action_requests:
                     ar_data = ar.action if hasattr(ar, "action") else ar
-                    if isinstance(ar_data, dict) and isinstance(ar_data.get("action"), dict):
+                    if isinstance(ar_data, dict) and isinstance(
+                        ar_data.get("action"), dict
+                    ):
                         ar_data = ar_data["action"]
                     if hasattr(ar_data, "model_dump"):
                         ar_data = ar_data.model_dump()
@@ -223,7 +241,7 @@ class AgentBridge:
         if self.app is None:
             return
         try:
-            thread_id = getattr(self.app, "_thread_id")
+            thread_id = self.app._thread_id
         except Exception:
             thread_id = None
         if thread_id is not None and thread_id == threading.get_ident():
@@ -340,9 +358,13 @@ class AgentBridge:
                 elif event.type == EventType.MESSAGE_CHUNK:
                     self._streaming_chunks.append(event.data or "")
                     if self._streaming_bubble is None:
-                        self._streaming_bubble = chat_log.add_agent_message("".join(self._streaming_chunks))
+                        self._streaming_bubble = chat_log.add_agent_message(
+                            "".join(self._streaming_chunks)
+                        )
                     else:
-                        self._streaming_bubble.update_content("".join(self._streaming_chunks))
+                        self._streaming_bubble.update_content(
+                            "".join(self._streaming_chunks)
+                        )
                     status_bar.set_streaming()
 
                 elif event.type == EventType.MESSAGE_COMPLETE:
@@ -371,14 +393,20 @@ class AgentBridge:
                         else getattr(tool_data, "args", {}) or {}
                     )
                     tool_call_id = (
-                        tool_data.get("id") if isinstance(tool_data, dict) else getattr(tool_data, "id", None)
+                        tool_data.get("id")
+                        if isinstance(tool_data, dict)
+                        else getattr(tool_data, "id", None)
                     )
 
                     existing_widget = None
                     if isinstance(tool_call_id, str) and tool_call_id:
                         existing_widget = self._tool_widgets_by_id.get(tool_call_id)
                     if existing_widget is not None:
-                        if getattr(existing_widget, "tool_name", None) in ("unknown", "tool", "") and tool_name:
+                        if (
+                            getattr(existing_widget, "tool_name", None)
+                            in ("unknown", "tool", "")
+                            and tool_name
+                        ):
                             existing_widget.tool_name = tool_name
                         if tool_args and not getattr(existing_widget, "args", None):
                             if hasattr(existing_widget, "update_args"):
@@ -391,10 +419,14 @@ class AgentBridge:
 
                     if getattr(app, "debug_tool_calls", False):
                         dbg = (
-                            (event.metadata or {}).get("debug_tool_call") if isinstance(event.metadata, dict) else None
+                            (event.metadata or {}).get("debug_tool_call")
+                            if isinstance(event.metadata, dict)
+                            else None
                         )
                         prev = (
-                            (event.metadata or {}).get("debug_tc_preview") if isinstance(event.metadata, dict) else None
+                            (event.metadata or {}).get("debug_tc_preview")
+                            if isinstance(event.metadata, dict)
+                            else None
                         )
                         msg = f"tool_call id={tool_call_id} name={tool_name}"
                         if dbg is not None:
@@ -410,7 +442,9 @@ class AgentBridge:
 
                     # Use new widget
                     if hasattr(chat_log, "add_tool_call_widget"):
-                        widget = chat_log.add_tool_call_widget(tool_name=tool_name, args=tool_args, status="pending")
+                        widget = chat_log.add_tool_call_widget(
+                            tool_name=tool_name, args=tool_args, status="pending"
+                        )
                         self._active_tool_widget = widget
                         self._pending_tool_widgets.append(widget)
                         if isinstance(tool_call_id, str) and tool_call_id:
@@ -431,8 +465,14 @@ class AgentBridge:
                     self._finish_streaming_message_segment()
                     result = event.data or ""
                     meta = event.metadata or {}
-                    tool_call_id = meta.get("tool_call_id") if isinstance(meta, dict) else None
-                    tool_name = meta.get("tool_name", "tool") if isinstance(meta, dict) else "tool"
+                    tool_call_id = (
+                        meta.get("tool_call_id") if isinstance(meta, dict) else None
+                    )
+                    tool_name = (
+                        meta.get("tool_name", "tool")
+                        if isinstance(meta, dict)
+                        else "tool"
+                    )
                     widget = None
                     if isinstance(tool_call_id, str) and tool_call_id:
                         widget = self._tool_widgets_by_id.pop(tool_call_id, None)
@@ -452,10 +492,17 @@ class AgentBridge:
                                 break
                     if widget is None and hasattr(chat_log, "add_tool_call_widget"):
                         widget = chat_log.add_tool_call_widget(
-                            tool_name=tool_name, args={}, status="success", result=result
+                            tool_name=tool_name,
+                            args={},
+                            status="success",
+                            result=result,
                         )
                     if widget is not None:
-                        if getattr(widget, "tool_name", None) in ("unknown", "tool", "") and tool_name:
+                        if (
+                            getattr(widget, "tool_name", None)
+                            in ("unknown", "tool", "")
+                            and tool_name
+                        ):
                             widget.tool_name = tool_name
                         widget.update_result(result, "success")
                         if widget in self._pending_tool_widgets:
@@ -467,8 +514,14 @@ class AgentBridge:
                     self._finish_streaming_message_segment()
                     error = event.data or "Unknown error"
                     meta = event.metadata or {}
-                    tool_call_id = meta.get("tool_call_id") if isinstance(meta, dict) else None
-                    tool_name = meta.get("tool_name", "tool") if isinstance(meta, dict) else "tool"
+                    tool_call_id = (
+                        meta.get("tool_call_id") if isinstance(meta, dict) else None
+                    )
+                    tool_name = (
+                        meta.get("tool_name", "tool")
+                        if isinstance(meta, dict)
+                        else "tool"
+                    )
                     widget = None
                     if isinstance(tool_call_id, str) and tool_call_id:
                         widget = self._tool_widgets_by_id.pop(tool_call_id, None)
@@ -488,10 +541,17 @@ class AgentBridge:
                                 break
                     if widget is None and hasattr(chat_log, "add_tool_call_widget"):
                         widget = chat_log.add_tool_call_widget(
-                            tool_name=tool_name, args={}, status="error", result=f"Error: {error}"
+                            tool_name=tool_name,
+                            args={},
+                            status="error",
+                            result=f"Error: {error}",
                         )
                     if widget is not None:
-                        if getattr(widget, "tool_name", None) in ("unknown", "tool", "") and tool_name:
+                        if (
+                            getattr(widget, "tool_name", None)
+                            in ("unknown", "tool", "")
+                            and tool_name
+                        ):
                             widget.tool_name = tool_name
                         widget.update_result(f"Error: {error}", "error")
                         if widget in self._pending_tool_widgets:
@@ -510,7 +570,9 @@ class AgentBridge:
 
                     tool_name = self._extract_tool_name_from_interrupt(interrupt_data)
 
-                    action_requests = self._extract_action_requests_from_interrupt(interrupt_data)
+                    action_requests = self._extract_action_requests_from_interrupt(
+                        interrupt_data
+                    )
                     self._pending_hitl_action_count = max(1, len(action_requests))
 
                     if action_requests and self._pending_tool_widgets:
@@ -520,7 +582,11 @@ class AgentBridge:
                             ar = action_requests[idx]
                             name = ar.get("name") if isinstance(ar, dict) else None
                             args = ar.get("args") if isinstance(ar, dict) else None
-                            if name and getattr(widget, "tool_name", None) in ("unknown", "tool", ""):
+                            if name and getattr(widget, "tool_name", None) in (
+                                "unknown",
+                                "tool",
+                                "",
+                            ):
                                 widget.tool_name = name
                                 widget.update_status("pending")
                             if args and not getattr(widget, "args", None):
@@ -532,8 +598,13 @@ class AgentBridge:
                     auto_approve_tools = getattr(app, "auto_approve_tools", [])
 
                     if tool_name in auto_approve_tools:
-                        decisions = [{"type": "approve"} for _ in range(self._pending_hitl_action_count)]
-                        asyncio.create_task(self.resume_with_decision({"decisions": decisions}))
+                        decisions = [
+                            {"type": "approve"}
+                            for _ in range(self._pending_hitl_action_count)
+                        ]
+                        asyncio.create_task(
+                            self.resume_with_decision({"decisions": decisions})
+                        )
                         return
 
                     def on_decision(decision: dict) -> None:
@@ -542,9 +613,13 @@ class AgentBridge:
                             tool_to_add = decision.get("tool_name", tool_name)
                             if tool_to_add and tool_to_add not in auto_approve_tools:
                                 # We're already in the main thread, so we can set directly
-                                setattr(app, "auto_approve_tools", auto_approve_tools + [tool_to_add])
+                                app.auto_approve_tools = auto_approve_tools + [
+                                    tool_to_add
+                                ]
 
-                        if "decisions" in decision and isinstance(decision["decisions"], list):
+                        if "decisions" in decision and isinstance(
+                            decision["decisions"], list
+                        ):
                             decisions = decision["decisions"]
                         else:
                             t = decision.get("type", "approve")
@@ -555,8 +630,12 @@ class AgentBridge:
                                     base["message"] = msg
                             else:
                                 base = {"type": "approve"}
-                            decisions = [base for _ in range(self._pending_hitl_action_count)]
-                        asyncio.create_task(self.resume_with_decision({"decisions": decisions}))
+                            decisions = [
+                                base for _ in range(self._pending_hitl_action_count)
+                            ]
+                        asyncio.create_task(
+                            self.resume_with_decision({"decisions": decisions})
+                        )
 
                     chat_log.add_approval_request(interrupt_data, callback=on_decision)
 
@@ -570,7 +649,11 @@ class AgentBridge:
                     status_bar.set_ready()
                     input_box.set_disabled(False)
             except Exception as e:
-                app.notify(f"[ERROR] Error dispatching event {event.type}: {e}", title="Error", severity="error")
+                app.notify(
+                    f"[ERROR] Error dispatching event {event.type}: {e}",
+                    title="Error",
+                    severity="error",
+                )
                 print(f"[ERROR] Error dispatching event {event.type}: {e}")
                 import traceback
 

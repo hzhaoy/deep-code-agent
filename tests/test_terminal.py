@@ -20,11 +20,17 @@ class TestTerminalTool:
 
     def test_rejects_timeout_above_maximum(self):
         result = terminal.invoke({"command": "echo hi", "timeout": MAX_TIMEOUT + 1})
-        assert result == f"Error: Timeout {MAX_TIMEOUT + 1} exceeds maximum allowed {MAX_TIMEOUT} seconds"
+        assert (
+            result
+            == f"Error: Timeout {MAX_TIMEOUT + 1} exceeds maximum allowed {MAX_TIMEOUT} seconds"
+        )
 
     def test_blocks_dangerous_commands(self):
         result = terminal.invoke({"command": "RM -RF /"})
-        assert result == "Error: Command contains potentially dangerous operation: rm -rf /"
+        assert (
+            result
+            == "Error: Command contains potentially dangerous operation: rm -rf /"
+        )
 
     def test_rejects_shell_control_operators(self):
         result = terminal.invoke({"command": "echo hi && whoami"})
@@ -32,7 +38,9 @@ class TestTerminalTool:
 
     @patch("deep_code_agent.tools.terminal.subprocess.run")
     def test_returns_stdout_stderr_and_exit_status(self, mock_run):
-        mock_run.return_value = MagicMock(stdout="hello\n", stderr="warn\n", returncode=1)
+        mock_run.return_value = MagicMock(
+            stdout="hello\n", stderr="warn\n", returncode=1
+        )
 
         result = terminal.invoke({"command": "echo hi", "timeout": 5})
 

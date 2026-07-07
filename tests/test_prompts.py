@@ -13,7 +13,10 @@ def test_create_subagent_configurations_returns_expected_agents():
     subagents = create_subagent_configurations()
 
     assert len(subagents) == 5
-    names = [subagent["name"] if isinstance(subagent, dict) else subagent.name for subagent in subagents]
+    names = [
+        subagent["name"] if isinstance(subagent, dict) else subagent.name
+        for subagent in subagents
+    ]
     assert names == [
         "code_reviewer",
         "test_writer",

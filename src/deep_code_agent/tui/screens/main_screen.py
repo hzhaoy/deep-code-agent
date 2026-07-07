@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -79,7 +80,9 @@ class MainScreen(Screen):
         """Clear the conversation stream."""
         chat_log = self.get_chat_log()
         if chat_log.has_pending_approval_request():
-            self.get_status_bar().set_waiting_approval("Resolve approval before clearing")
+            self.get_status_bar().set_waiting_approval(
+                "Resolve approval before clearing"
+            )
             return
         chat_log.clear_messages()
         chat_log.add_session_header(self.session_info)
@@ -104,18 +107,12 @@ class MainScreen(Screen):
     def update_session_info(self, session_info: dict) -> None:
         """Update session information."""
         self.session_info = session_info
-        try:
+        with suppress(Exception):
             self.get_chat_log().update_session_header(session_info)
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.get_status_bar().session_info = session_info
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.get_input_box().session_info = session_info
-        except Exception:
-            pass
 
     @work(exclusive=True, name="agent_request")
     async def process_agent_request(self, content: str) -> None:
@@ -167,21 +164,17 @@ class MainScreen(Screen):
 
     def _show_worker_error(self, message: str) -> None:
         """Render worker failures in the main UI instead of a transient popup."""
-        try:
+        with suppress(Exception):
             self.get_status_bar().set_error(message)
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.get_input_box().set_disabled(False)
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.get_chat_log().add_system_message(f"Error: {message}")
-        except Exception:
-            pass
 
     def _format_help_message(self) -> str:
-        commands = "\n".join(f"- {command.name}: {command.description}" for command in SLASH_COMMANDS)
+        commands = "\n".join(
+            f"- {command.name}: {command.description}" for command in SLASH_COMMANDS
+        )
         return f"Shortcuts:\n- Enter: send\n- Ctrl+L: clear chat\n- Ctrl+D: theme\n\nCommands:\n{commands}"
 
     def _format_skills_message(self) -> str:
@@ -197,13 +190,19 @@ class MainScreen(Screen):
 
         if names:
             unique_names = sorted(set(names))
-            return "Available skills:\n" + "\n".join(f"- {name}" for name in unique_names)
+            return "Available skills:\n" + "\n".join(
+                f"- {name}" for name in unique_names
+            )
         if skills:
             return "No skills found under configured skill directories."
         return "No local skills directory is configured for this session."
 
     def _format_model_message(self) -> str:
-        model = str(self.session_info.get("model") or self.session_info.get("model_name") or "default")
+        model = str(
+            self.session_info.get("model")
+            or self.session_info.get("model_name")
+            or "default"
+        )
         provider = str(self.session_info.get("model_provider") or "openai")
         return (
             f"Current model: {model} ({provider}).\n"

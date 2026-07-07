@@ -315,7 +315,9 @@ def test_side_panel_compacts_long_codebase_path():
     """Long paths should not overwhelm the sidebar."""
     from deep_code_agent.tui.widgets.side_panel import SidePanel
 
-    panel = SidePanel(session_info={"codebase_dir": "/very/" + "long/" * 12 + "project"})
+    panel = SidePanel(
+        session_info={"codebase_dir": "/very/" + "long/" * 12 + "project"}
+    )
     compact = panel._short_path(panel.session_info["codebase_dir"])
 
     assert compact.startswith("...")
@@ -336,7 +338,10 @@ def test_approval_request_resolves_inline_decision():
                     {"action": {"name": "write_file", "args": {"path": "hello.py"}}}
                 ]
             }
-            widget = ApprovalRequest(interrupt_data, callback=lambda decision: results.setdefault("decision", decision))
+            widget = ApprovalRequest(
+                interrupt_data,
+                callback=lambda decision: results.setdefault("decision", decision),
+            )
             await pilot.app.mount(widget)
             await pilot.pause()
 
@@ -373,7 +378,11 @@ def test_chat_log_adds_inline_approval_request():
             await pilot.pause()
 
             widget = chat_log.add_approval_request(
-                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "terminal", "args": {"cmd": "pwd"}}}
+                    ]
+                },
                 callback=lambda decision: None,
             )
             await pilot.pause()
@@ -397,7 +406,11 @@ def test_chat_log_tracks_pending_approval_requests():
             await pilot.pause()
 
             widget = chat_log.add_approval_request(
-                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "terminal", "args": {"cmd": "pwd"}}}
+                    ]
+                },
                 callback=lambda decision: None,
             )
             await pilot.pause()
@@ -423,7 +436,11 @@ def test_chat_log_focuses_inline_approval_request():
             await pilot.pause()
 
             widget = chat_log.add_approval_request(
-                {"action_requests": [{"action": {"name": "terminal", "args": {"cmd": "pwd"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "terminal", "args": {"cmd": "pwd"}}}
+                    ]
+                },
                 callback=lambda decision: None,
             )
             await pilot.pause()
@@ -441,13 +458,20 @@ def test_approval_request_mouse_click_only_focuses():
     """Clicking an option should not approve or reject the request."""
     import asyncio
 
-    from deep_code_agent.tui.widgets.approval_request import ApprovalChoice, ApprovalRequest
+    from deep_code_agent.tui.widgets.approval_request import (
+        ApprovalChoice,
+        ApprovalRequest,
+    )
 
     async def run_test():
         async with App().run_test() as pilot:
             decisions = []
             widget = ApprovalRequest(
-                {"action_requests": [{"action": {"name": "write_file", "args": {"path": "hello.py"}}}]},
+                {
+                    "action_requests": [
+                        {"action": {"name": "write_file", "args": {"path": "hello.py"}}}
+                    ]
+                },
                 callback=decisions.append,
             )
             await pilot.app.mount(widget)

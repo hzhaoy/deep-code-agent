@@ -11,9 +11,11 @@ from deep_code_agent.cli import _initialize_agent, _resolve_skills, _run_tui_mod
 
 def test_main_prints_version_and_exits(capsys):
     """The CLI should expose the packaged version via --version."""
-    with patch("sys.argv", ["deep-code-agent", "--version"]):
-        with pytest.raises(SystemExit) as exc_info:
-            main()
+    with (
+        patch("sys.argv", ["deep-code-agent", "--version"]),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        main()
 
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
@@ -46,7 +48,10 @@ def test_initialize_agent_skips_model_creation_for_default_provider(
     mock_create_code_agent.assert_called_once()
     assert mock_create_code_agent.call_args.kwargs["model"] is None
     assert mock_create_code_agent.call_args.kwargs["backend_type"] == "state"
-    assert mock_create_code_agent.call_args.kwargs["checkpointer"] is mock_checkpointer.return_value
+    assert (
+        mock_create_code_agent.call_args.kwargs["checkpointer"]
+        is mock_checkpointer.return_value
+    )
     assert mock_create_code_agent.call_args.kwargs["skills"] is None
 
 
@@ -79,9 +84,15 @@ def test_initialize_agent_builds_model_for_explicit_provider(
         api_key=None,
         base_url=None,
     )
-    assert mock_create_code_agent.call_args.kwargs["model"] is mock_create_chat_model.return_value
+    assert (
+        mock_create_code_agent.call_args.kwargs["model"]
+        is mock_create_chat_model.return_value
+    )
     assert mock_create_code_agent.call_args.kwargs["backend_type"] == "filesystem"
-    assert mock_create_code_agent.call_args.kwargs["checkpointer"] is mock_checkpointer.return_value
+    assert (
+        mock_create_code_agent.call_args.kwargs["checkpointer"]
+        is mock_checkpointer.return_value
+    )
 
 
 def test_resolve_skills_uses_explicit_dirs_in_order(tmp_path):
@@ -89,7 +100,9 @@ def test_resolve_skills_uses_explicit_dirs_in_order(tmp_path):
     first = tmp_path / "first"
     second = tmp_path / "second"
 
-    result = _resolve_skills(SimpleNamespace(skills_dir=[str(first), str(second)]), str(tmp_path))
+    result = _resolve_skills(
+        SimpleNamespace(skills_dir=[str(first), str(second)]), str(tmp_path)
+    )
 
     assert result == [first.absolute().as_posix(), second.absolute().as_posix()]
 
@@ -136,12 +149,16 @@ def test_initialize_agent_passes_resolved_skills(
 
     _initialize_agent(args, str(tmp_path))
 
-    assert mock_create_code_agent.call_args.kwargs["skills"] == [skills.absolute().as_posix()]
+    assert mock_create_code_agent.call_args.kwargs["skills"] == [
+        skills.absolute().as_posix()
+    ]
 
 
 @patch("deep_code_agent.tui.DeepCodeAgentApp")
 @patch("deep_code_agent.cli._initialize_agent")
-def test_tui_mode_defers_agent_initialization_until_after_app_starts(mock_initialize_agent, mock_app_class):
+def test_tui_mode_defers_agent_initialization_until_after_app_starts(
+    mock_initialize_agent, mock_app_class
+):
     """TUI mode should render before doing slow agent initialization."""
     args = SimpleNamespace(
         model_name=None,
@@ -160,13 +177,18 @@ def test_tui_mode_defers_agent_initialization_until_after_app_starts(mock_initia
     mock_app_class.assert_called_once()
     assert "agent_factory" in mock_app_class.call_args.kwargs
     mock_app_class.call_args.kwargs["agent_factory"]()
-    assert mock_initialize_agent.call_args.args == (args, mock_app_class.call_args.kwargs["session_info"]["codebase_dir"])
+    assert mock_initialize_agent.call_args.args == (
+        args,
+        mock_app_class.call_args.kwargs["session_info"]["codebase_dir"],
+    )
     app_instance.run.assert_called_once_with()
 
 
 @patch("dotenv.load_dotenv")
 @patch("deep_code_agent.tui.DeepCodeAgentApp")
-def test_tui_session_info_uses_env_model_and_package_version(mock_app_class, mock_load_dotenv, monkeypatch):
+def test_tui_session_info_uses_env_model_and_package_version(
+    mock_app_class, mock_load_dotenv, monkeypatch
+):
     """The TUI header should reflect dotenv-backed model metadata before agent init."""
     monkeypatch.setenv("MODEL_NAME", "gpt-from-env")
     args = SimpleNamespace(

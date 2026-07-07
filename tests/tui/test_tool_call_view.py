@@ -1,4 +1,5 @@
 """Tests for ToolCallView widget."""
+
 from textual.app import App
 
 
@@ -9,9 +10,7 @@ def test_tool_call_view_displays_result():
     async def run_test():
         async with App().run_test() as pilot:
             widget = ToolCallView(
-                tool_name="read_file",
-                args={"path": "test.txt"},
-                status="pending"
+                tool_name="read_file", args={"path": "test.txt"}, status="pending"
             )
 
             await pilot.app.mount(widget)
@@ -23,6 +22,7 @@ def test_tool_call_view_displays_result():
             assert widget.result == "File content here..."
 
     import asyncio
+
     asyncio.run(run_test())
 
 
@@ -37,4 +37,5 @@ def test_tool_call_view_can_update_args_after_mount():
             assert widget.args.get("file_path") == "x.txt"
 
     import asyncio
+
     asyncio.run(run_test())

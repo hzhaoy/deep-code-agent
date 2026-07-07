@@ -191,8 +191,12 @@ class TestCreateCodeAgentInterruptOn:
 
         assert target_dir.exists()
         call_kwargs = mock_create_agent.call_args.kwargs
-        mock_filesystem_backend.assert_called_once_with(root_dir=target_dir.absolute().as_posix(), virtual_mode=False)
-        mock_make_terminal_tool.assert_called_once_with(target_dir.absolute().as_posix())
+        mock_filesystem_backend.assert_called_once_with(
+            root_dir=target_dir.absolute().as_posix(), virtual_mode=False
+        )
+        mock_make_terminal_tool.assert_called_once_with(
+            target_dir.absolute().as_posix()
+        )
         assert call_kwargs["backend"] is mock_filesystem_backend.return_value
         assert call_kwargs["tools"] == [mock_terminal_tool]
         assert call_kwargs["tools"][0] is not terminal
@@ -230,7 +234,9 @@ class TestCreateCodeAgentInterruptOn:
     def test_state_backend_rejects_skills(self):
         """State backend should not accept local skill directories."""
         with pytest.raises(ValueError, match="Skills require filesystem backend"):
-            create_code_agent("/tmp/test", backend_type="state", skills=["/tmp/test/.agents/skills"])
+            create_code_agent(
+                "/tmp/test", backend_type="state", skills=["/tmp/test/.agents/skills"]
+            )
 
     @patch("deep_code_agent.code_agent.create_deep_agent")
     @patch("deep_code_agent.code_agent.create_chat_model")

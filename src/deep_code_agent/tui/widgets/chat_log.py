@@ -1,5 +1,7 @@
 """Chat log widget for displaying conversation history."""
 
+from contextlib import suppress
+
 from textual.containers import VerticalScroll
 from textual.reactive import reactive
 
@@ -57,10 +59,8 @@ class ChatLog(VerticalScroll):
     def add_session_header(self, session_info: dict | None = None) -> SessionHeader:
         """Add or replace the Codex-style session header."""
         if self._session_header is not None:
-            try:
+            with suppress(Exception):
                 self._session_header.remove()
-            except Exception:
-                pass
 
         header = SessionHeader(session_info or {})
         self._session_header = header
@@ -136,7 +136,7 @@ class ChatLog(VerticalScroll):
         tool_name: str,
         args: dict,
         status: str = "pending",
-        result: str | None = None
+        result: str | None = None,
     ):
         """Add a tool call widget to the chat log.
 
@@ -152,10 +152,7 @@ class ChatLog(VerticalScroll):
         from deep_code_agent.tui.widgets.tool_call_view import ToolCallView
 
         widget = ToolCallView(
-            tool_name=tool_name,
-            args=args,
-            status=status,
-            result=result
+            tool_name=tool_name, args=args, status=status, result=result
         )
         self._mount_above_todos_card(widget)
         self._scroll_to_bottom()
@@ -201,10 +198,8 @@ class ChatLog(VerticalScroll):
                 # Textual versions vary in move/remount behavior. If moving an
                 # existing widget fails, recreate the card while preserving the
                 # user's expanded/collapsed preference.
-                try:
+                with suppress(Exception):
                     self._todos_card.remove()
-                except Exception:
-                    pass
                 self._todos_card = TodosProgressCard(todos, expanded=expanded)
                 self.mount(self._todos_card)
 

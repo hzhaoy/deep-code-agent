@@ -87,7 +87,7 @@ class ToolCallView(Vertical):
         args: dict,
         status: str = "pending",
         result: str | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.tool_name = tool_name
@@ -115,7 +115,9 @@ class ToolCallView(Vertical):
             self._args_container = args_container
             with args_container:
                 for key, value in self.args.items():
-                    yield Static(self._format_arg(key, value), classes="arg-line", markup=False)
+                    yield Static(
+                        self._format_arg(key, value), classes="arg-line", markup=False
+                    )
 
         # Result (shown if result exists and is not empty)
         if self.result and str(self.result).strip():
@@ -143,7 +145,11 @@ class ToolCallView(Vertical):
         return formatted
 
     def _display_name(self) -> str:
-        return self.tool_name if self.tool_name and self.tool_name not in ("unknown", "", "None") else "tool"
+        return (
+            self.tool_name
+            if self.tool_name and self.tool_name not in ("unknown", "", "None")
+            else "tool"
+        )
 
     def _header_text(self) -> str:
         verb = {
@@ -197,7 +203,9 @@ class ToolCallView(Vertical):
             self.mount(args_container)
 
         for key, value in args.items():
-            args_container.mount(Static(self._format_arg(key, value), classes="arg-line", markup=False))
+            args_container.mount(
+                Static(self._format_arg(key, value), classes="arg-line", markup=False)
+            )
 
     def update_result(self, result: str, status: str = "success") -> None:
         """Update the tool call result and status.

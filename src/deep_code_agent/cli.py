@@ -24,7 +24,10 @@ def _format_args(args: dict[str, Any], max_length: int = 200) -> str:
 def _resolve_skills(args, codebase_dir: str) -> list[str] | None:
     """Resolve skill directories from CLI args or the project default."""
     if args.skills_dir:
-        return [Path(skill_dir).expanduser().absolute().as_posix() for skill_dir in args.skills_dir]
+        return [
+            Path(skill_dir).expanduser().absolute().as_posix()
+            for skill_dir in args.skills_dir
+        ]
 
     default_skills = Path(codebase_dir) / ".agents" / "skills"
     if default_skills.exists():
@@ -45,6 +48,7 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
     """
     from dotenv import load_dotenv
     from langgraph.checkpoint.memory import InMemorySaver
+
     from deep_code_agent.code_agent import create_code_agent
     from deep_code_agent.models.llms.langchain_chat import create_chat_model
 
@@ -52,7 +56,10 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
     skills = _resolve_skills(args, codebase_dir)
 
     model = None
-    if any([args.model_name, args.api_key, args.base_url]) or args.model_provider != "openai":
+    if (
+        any([args.model_name, args.api_key, args.base_url])
+        or args.model_provider != "openai"
+    ):
         model = create_chat_model(
             model_name=args.model_name,
             model_provider=args.model_provider,
@@ -69,7 +76,9 @@ def _initialize_agent(args, codebase_dir: str) -> Any:
     )
 
 
-def _get_user_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any] | None:
+def _get_user_decision(
+    tool_name: str, tool_args: dict[str, Any]
+) -> dict[str, Any] | None:
     """Get user decision for pending action.
 
     Returns:
@@ -141,7 +150,9 @@ def _get_edit_decision(tool_name: str, tool_args: dict[str, Any]) -> dict[str, A
     }
 
 
-def _handle_interrupt(agent, interrupt_data, config: "RunnableConfig") -> dict[str, Any] | None:
+def _handle_interrupt(
+    agent, interrupt_data, config: "RunnableConfig"
+) -> dict[str, Any] | None:
     """Handle human-in-the-loop interrupt using streaming.
 
     Returns:
@@ -200,15 +211,26 @@ def _handle_interrupt(agent, interrupt_data, config: "RunnableConfig") -> dict[s
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="deep-code-agent", description="Deep Code Agent CLI")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("--backend-type", choices=["state", "filesystem"], default="state", help="Backend type")
+    parser = argparse.ArgumentParser(
+        prog="deep-code-agent", description="Deep Code Agent CLI"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    parser.add_argument(
+        "--backend-type",
+        choices=["state", "filesystem"],
+        default="state",
+        help="Backend type",
+    )
     parser.add_argument("--model-name", default=None, help="Model name")
     parser.add_argument("--model-provider", default="openai", help="Model provider")
     parser.add_argument("--api-key", default=None, help="API Key")
     parser.add_argument("--base-url", default=None, help="Base URL for model service")
     parser.add_argument("--thread-id", default="1", help="Thread ID for session")
-    parser.add_argument("--tui", action="store_true", help="Use TUI mode (experimental)")
+    parser.add_argument(
+        "--tui", action="store_true", help="Use TUI mode (experimental)"
+    )
     parser.add_argument(
         "--skills-dir",
         action="append",
@@ -288,7 +310,9 @@ def _run_tui_mode(args) -> None:
         args: Parsed command line arguments
     """
     import os
+
     from dotenv import load_dotenv
+
     from deep_code_agent.tui import DeepCodeAgentApp
 
     # Get codebase directory
@@ -324,5 +348,6 @@ def _run_tui_mode(args) -> None:
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         raise
